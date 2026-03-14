@@ -17,10 +17,21 @@ import {
   createDocument,
 } from "@/lib/firebase/firestore";
 import { Role } from "@/constants/roles";
+import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
 import type { User } from "@/types/user";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit check
+    const ip = getClientIP(request);
+    const rl = apiRateLimiter.check(`create-staff:${ip}`);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rl.resetInMs / 1000)) } }
+      );
+    }
+
     // ── Step 1: Verify Firebase Auth ID token ──────────────────
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {

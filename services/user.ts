@@ -12,6 +12,7 @@ import {
   limit,
 } from "@/lib/firebase/firestore";
 import { Role } from "@/constants/roles";
+import { cache } from "@/lib/cache";
 import type { User, StaffProfile, PrisonHead } from "@/types/user";
 import type { QueryConstraint } from "firebase/firestore";
 
@@ -21,7 +22,13 @@ const COLLECTION = "users";
  * Fetch a single user document by UID.
  */
 export async function getUserById(uid: string): Promise<User | null> {
-  return getDocument<User>(COLLECTION, uid);
+  const cacheKey = `user:${uid}`;
+  const cached = cache.get<User>(cacheKey);
+  if (cached) return cached;
+
+  const user = await getDocument<User>(COLLECTION, uid);
+  if (user) cache.set(cacheKey, user);
+  return user;
 }
 
 /**
@@ -81,6 +88,7 @@ export async function updateUserProfile(
   uid: string,
   data: Partial<StaffProfile>
 ): Promise<void> {
+  cache.invalidate(`user:${uid}`);
   return updateDocument(COLLECTION, uid, data);
 }
 

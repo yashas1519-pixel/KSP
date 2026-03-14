@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Standalone output for faster builds and containerized deployments
+  output: "standalone",
+
   // ─── Performance ──────────────────────────────────────────────────
-  // Optimize package imports to reduce bundle size and compile times
   experimental: {
     optimizePackageImports: [
       "recharts",
@@ -24,7 +26,6 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
 
   // ─── Firebase / Server-only fixes ─────────────────────────────────
-  // Prevent server-only modules from being bundled client-side
   serverExternalPackages: ["firebase-admin"],
 };
 

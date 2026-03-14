@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   limit,
+  enableMultiTabIndexedDbPersistence,
   type Firestore,
   type DocumentData,
   type QueryConstraint,
@@ -18,6 +19,17 @@ import {
 import { firebaseApp } from "./firebase";
 
 const db: Firestore = getFirestore(firebaseApp);
+
+// Enable offline persistence for faster subsequent reads
+if (typeof window !== "undefined") {
+  enableMultiTabIndexedDbPersistence(db).catch((err) => {
+    if (err.code === "failed-precondition") {
+      // Multiple tabs open — persistence can only be enabled in one
+    } else if (err.code === "unimplemented") {
+      // Browser doesn't support IndexedDB
+    }
+  });
+}
 
 export async function getDocument<T extends DocumentData>(
   collectionName: string,

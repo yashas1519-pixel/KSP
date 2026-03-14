@@ -6,11 +6,22 @@
 import { NextResponse } from "next/server";
 import { generateDietPlan } from "@/lib/claude/diet";
 import { getDocument, createDocument } from "@/lib/firebase/firestore";
+import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
 import type { StaffProfile } from "@/types/user";
 import type { DietPlanInput } from "@/types/diet";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit check
+    const ip = getClientIP(request);
+    const rl = apiRateLimiter.check(`diet:${ip}`);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rl.resetInMs / 1000)) } }
+      );
+    }
+
     // 1. Get auth token from header
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
