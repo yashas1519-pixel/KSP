@@ -1,0 +1,153 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // Helper functions
+    // ============================================================
+
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the current user's document data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if the current user has a specific role
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    // Check if the current user is a Super Admin
+    function isSuperAdmin() {
+      return hasRole('SUPER_ADMIN');
+    }
+
+    // Check if the current user is a Prison Head
+    function isPrisonHead() {
+      return hasRole('PRISON_HEAD');
+    }
+
+    // Check if the current user is Staff
+    function isStaff() {
+      return hasRole('STAFF');
+    }
+
+    // Check if user belongs to the same prison as the resource
+    function isSamePrison() {
+      return getUserData().prisonId == resource.data.prisonId;
+    }
+
+    // Check if user belongs to a specific prison
+    function isInPrison(prisonId) {
+      return getUserData().prisonId == prisonId;
+    }
+
+    // ============================================================
+    // /users/{uid}
+    // - Staff: read/write own document only
+    // - Prison Head: read staff in their prison (same prisonId)
+    // - Super Admin: read/write all
+    // ============================================================
+    match /users/{uid} {
+      // Any authenticated user can read their own document
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+
+      // User can write (update) their own document
+      allow write: if isAuthenticated() && request.auth.uid == uid;
+
+      // Prison Head can read users in THEIR prison
+      allow read: if isAuthenticated()
+        && isPrisonHead()
+        && resource.data.prisonId == getUserData().prisonId;
+
+      // Super Admin can read and write all user documents
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ============================================================
+    // /prisons/{prisonId}
+    // - Prison Head: read/write their own prison
+    // - Super Admin: read/write all
+    // ============================================================
+    match /prisons/{prisonId} {
+      // Prison Head can read/write their own prison
+      allow read, write: if isAuthenticated()
+        && isPrisonHead()
+        && isInPrison(prisonId);
+
+      // Super Admin can read/write all prisons
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ============================================================
+    // /health_logs/{logId}
+    // - Staff: read/write own logs (userId == auth.uid)
+    // - Prison Head: read logs of staff in their prison
+    // - Super Admin: read all
+    // ============================================================
+    match /health_logs/{logId} {
+      // Staff can read/write their own logs
+      allow read, write: if isAuthenticated()
+        && request.auth.uid == resource.data.userId;
+
+      // Staff can create new logs for themselves
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.userId;
+
+      // Prison Head can read logs of staff in their prison
+      allow read: if isAuthenticated()
+        && isPrisonHead()
+        && isSamePrison();
+
+      // Super Admin can read all health logs
+      allow read: if isSuperAdmin();
+    }
+
+    // ============================================================
+    // /diet_plans/{planId}
+    // - Staff: read only APPROVED plans where userId matches
+    // - Prison Head: read/write plans for staff in their prison
+    // - Super Admin: read/write all
+    // ============================================================
+    match /diet_plans/{planId} {
+      // Staff can read only approved plans for themselves
+      allow read: if isAuthenticated()
+        && request.auth.uid == resource.data.userId
+        && resource.data.status == 'approved';
+
+      // Prison Head can read/write plans for staff in their prison
+      allow read, write: if isAuthenticated()
+        && isPrisonHead()
+        && isSamePrison();
+
+      // Super Admin can read/write all diet plans
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ============================================================
+    // /exercise_plans/{planId}
+    // - Staff: read only APPROVED plans where userId matches
+    // - Prison Head: read/write plans for staff in their prison
+    // - Super Admin: read/write all
+    // ============================================================
+    match /exercise_plans/{planId} {
+      // Staff can read only approved plans for themselves
+      allow read: if isAuthenticated()
+        && request.auth.uid == resource.data.userId
+        && resource.data.status == 'approved';
+
+      // Prison Head can read/write plans for staff in their prison
+      allow read, write: if isAuthenticated()
+        && isPrisonHead()
+        && isSamePrison();
+
+      // Super Admin can read/write all exercise plans
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}
