@@ -1,5 +1,8 @@
 import {
+  initializeFirestore,
   getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   doc,
   getDoc,
@@ -11,24 +14,23 @@ import {
   where,
   orderBy,
   limit,
-  enableMultiTabIndexedDbPersistence,
   type Firestore,
   type DocumentData,
   type QueryConstraint,
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
 
-const db: Firestore = getFirestore(firebaseApp);
-
-// Enable offline persistence for faster subsequent reads
-if (typeof window !== "undefined") {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === "failed-precondition") {
-      // Multiple tabs open — persistence can only be enabled in one
-    } else if (err.code === "unimplemented") {
-      // Browser doesn't support IndexedDB
-    }
+// Use modern cache config; fall back to getFirestore on hot reload re-init
+let db: Firestore;
+try {
+  db = initializeFirestore(firebaseApp, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
   });
+} catch {
+  // Already initialized (hot reload) — just get the existing instance
+  db = getFirestore(firebaseApp);
 }
 
 export async function getDocument<T extends DocumentData>(

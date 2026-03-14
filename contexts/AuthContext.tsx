@@ -32,18 +32,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout — if auth state never resolves (e.g. Firestore hangs), stop loading
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 10000);
+
     const unsubscribe = onAuthStateChange(async (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser);
 
-        // Fetch user document from Firestore to get their role
-        const userDoc = await getDocument<User>("users", fbUser.uid);
+        try {
+          // Fetch user document from Firestore to get their role
+          const userDoc = await getDocument<User>("users", fbUser.uid);
 
-        if (userDoc) {
-          setUser(userDoc);
-          setRole(userDoc.role);
-        } else {
-          // User exists in Auth but not in Firestore — clear state
+          if (userDoc) {
+            setUser(userDoc);
+            setRole(userDoc.role);
+          } else {
+            // User exists in Auth but not in Firestore — clear state
+            setUser(null);
+            setRole(null);
+          }
+        } catch {
+          // Firestore read failed — don't hang forever
           setUser(null);
           setRole(null);
         }
@@ -56,7 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
