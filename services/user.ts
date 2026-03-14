@@ -92,6 +92,41 @@ export async function deactivateStaffAccount(uid: string): Promise<void> {
 }
 
 /**
+ * Fetch all users with PRISON_HEAD role.
+ */
+export async function getAllPrisonHeads(
+  pageSize: number = 100
+): Promise<PrisonHead[]> {
+  const constraints: QueryConstraint[] = [
+    where("role", "==", Role.PRISON_HEAD),
+    orderBy("displayName"),
+    limit(pageSize),
+  ];
+  return queryDocuments<PrisonHead>(COLLECTION, constraints);
+}
+
+/**
+ * Deactivate a Prison Head account by setting status to inactive.
+ */
+export async function deactivatePrisonHead(uid: string): Promise<void> {
+  return updateDocument(COLLECTION, uid, { status: "inactive" });
+}
+
+/**
+ * Fetch all staff across all prisons (for Super Admin analytics).
+ */
+export async function getAllStaff(
+  pageSize: number = 500
+): Promise<StaffProfile[]> {
+  const constraints: QueryConstraint[] = [
+    where("role", "==", Role.STAFF),
+    orderBy("fullNameEn"),
+    limit(pageSize),
+  ];
+  return queryDocuments<StaffProfile>(COLLECTION, constraints);
+}
+
+/**
  * Fetch all staff members for a given prison.
  */
 export async function getStaffByPrison(
@@ -106,3 +141,4 @@ export async function getStaffByPrison(
   ];
   return queryDocuments<StaffProfile>(COLLECTION, constraints);
 }
+
