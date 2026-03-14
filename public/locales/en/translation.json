@@ -1,0 +1,45 @@
+{
+  "app_name": "KSP Fitness",
+  "nav": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "health": "Health",
+    "diet": "Diet",
+    "exercise": "Exercise",
+    "staff": "Staff List",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Login",
+    "email": "Email",
+    "password": "Password",
+    "login_button": "Sign In",
+    "logging_in": "Signing in...",
+    "login_error": "Invalid email or password"
+  },
+  "roles": {
+    "super_admin": "Super Admin",
+    "prison_head": "Prison Head",
+    "staff": "Staff"
+  },
+  "bmi": {
+    "title": "BMI",
+    "underweight": "Underweight",
+    "normal": "Normal",
+    "overweight": "Overweight",
+    "obese_1": "Obese Class I",
+    "obese_2": "Obese Class II"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "no_data": "No data available"
+  }
+}
