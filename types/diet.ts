@@ -48,7 +48,7 @@ export interface DietPlanOutput {
 
 // ─── Stored in Firestore ────────────────────────────────────────────
 
-export type PlanStatus = "pending_approval" | "approved" | "active" | "archived";
+export type PlanStatus = "pending_approval" | "approved" | "rejected" | "active" | "archived";
 
 export interface StoredDietPlan {
   id: string;
@@ -58,6 +58,7 @@ export interface StoredDietPlan {
   generatedAt: Date;
   approvedBy?: string;
   approvedAt?: Date;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }

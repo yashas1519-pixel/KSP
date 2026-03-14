@@ -51,6 +51,7 @@ export interface StoredExercisePlan {
   generatedAt: Date;
   approvedBy?: string;
   approvedAt?: Date;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }

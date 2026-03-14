@@ -12,7 +12,7 @@ import {
   limit,
 } from "@/lib/firebase/firestore";
 import { Role } from "@/constants/roles";
-import type { User, StaffProfile } from "@/types/user";
+import type { User, StaffProfile, PrisonHead } from "@/types/user";
 import type { QueryConstraint } from "firebase/firestore";
 
 const COLLECTION = "users";
@@ -29,6 +29,13 @@ export async function getUserById(uid: string): Promise<User | null> {
  */
 export async function getStaffProfile(uid: string): Promise<StaffProfile | null> {
   return getDocument<StaffProfile>(COLLECTION, uid);
+}
+
+/**
+ * Fetch a prison head profile by UID.
+ */
+export async function getPrisonHeadProfile(uid: string): Promise<PrisonHead | null> {
+  return getDocument<PrisonHead>(COLLECTION, uid);
 }
 
 /**
@@ -61,6 +68,7 @@ export async function createStaffUser(
     role: Role.STAFF,
     prisonId: prisonHead.prisonId,
     prisonName: prisonHead.prisonName,
+    status: "active",
   };
 
   return createDocument(COLLECTION, staffUid, staffData);
@@ -74,6 +82,13 @@ export async function updateUserProfile(
   data: Partial<StaffProfile>
 ): Promise<void> {
   return updateDocument(COLLECTION, uid, data);
+}
+
+/**
+ * Deactivate a staff account by setting status to inactive.
+ */
+export async function deactivateStaffAccount(uid: string): Promise<void> {
+  return updateDocument(COLLECTION, uid, { status: "inactive" });
 }
 
 /**

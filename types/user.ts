@@ -45,6 +45,8 @@ export const EXISTING_CONDITIONS = [
   "None",
 ] as const;
 
+export type StaffStatus = "active" | "inactive";
+
 export interface StaffProfile extends User {
   role: Role.STAFF;
   prisonId: string;
@@ -64,6 +66,8 @@ export interface StaffProfile extends User {
   existingConditions: string[];
   achievements: string[];
   profileComplete: boolean;
+  status?: StaffStatus;
+  flaggedForMedicalReview?: boolean;
 }
 
 export interface PrisonHead extends User {

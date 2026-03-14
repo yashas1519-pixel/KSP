@@ -149,5 +149,20 @@ service cloud.firestore {
       // Super Admin can read/write all exercise plans
       allow read, write: if isSuperAdmin();
     }
+
+    // ============================================================
+    // /notifications/{uid}/alerts/{alertId}
+    // - ONLY the owner can read/write their own alerts
+    // - No other role has access to another user's notifications
+    // ============================================================
+    match /notifications/{uid}/alerts/{alertId} {
+      // Owner can read their own alerts
+      allow read: if isAuthenticated()
+        && request.auth.uid == uid;
+
+      // Owner can write (create, update, delete) their own alerts
+      allow write: if isAuthenticated()
+        && request.auth.uid == uid;
+    }
   }
 }
