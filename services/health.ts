@@ -1,47 +1,90 @@
 /**
- * Health service — abstracts Firestore operations for health records.
+ * Health service — abstracts Firestore operations for health logs.
  */
 
 import {
-  getDocument,
   queryDocuments,
   createDocument,
-  updateDocument,
   where,
   orderBy,
   limit,
 } from "@/lib/firebase/firestore";
-import type { HealthRecord, HealthSummary } from "@/types/health";
+import { calculateBMI, classifyBMI } from "@/lib/utils/bmi";
+import { BMICategory } from "@/constants/bmi";
 import type { QueryConstraint } from "firebase/firestore";
 
-const COLLECTION = "healthRecords";
-
-export async function getHealthRecord(id: string): Promise<HealthRecord | null> {
-  return getDocument<HealthRecord>(COLLECTION, id);
+export interface HealthLog {
+  id: string;
+  userId: string;
+  weightKg: number;
+  heightCm: number;
+  bmi: number;
+  bmiCategory: BMICategory;
+  waistCm?: number;
+  notes?: string;
+  timestamp: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export async function getHealthRecordsByUser(
+const COLLECTION = "health_logs";
+
+/**
+ * Create a new health log entry.
+ * Automatically calculates BMI and category from weight and height.
+ */
+export async function createHealthLog(
   userId: string,
-  pageSize: number = 20
-): Promise<HealthRecord[]> {
+  weightKg: number,
+  heightCm: number,
+  notes?: string,
+  waistCm?: number
+): Promise<string> {
+  const bmi = calculateBMI(weightKg, heightCm);
+  const bmiCategory = classifyBMI(bmi);
+  const id = crypto.randomUUID();
+
+  await createDocument(COLLECTION, id, {
+    id,
+    userId,
+    weightKg,
+    heightCm,
+    bmi,
+    bmiCategory,
+    waistCm,
+    notes,
+    timestamp: new Date(),
+  });
+
+  return id;
+}
+
+/**
+ * Fetch all health logs for a user, ordered by most recent first.
+ */
+export async function getHealthLogs(
+  userId: string,
+  pageSize: number = 50
+): Promise<HealthLog[]> {
   const constraints: QueryConstraint[] = [
     where("userId", "==", userId),
-    orderBy("date", "desc"),
+    orderBy("timestamp", "desc"),
     limit(pageSize),
   ];
-  return queryDocuments<HealthRecord>(COLLECTION, constraints);
+  return queryDocuments<HealthLog>(COLLECTION, constraints);
 }
 
-export async function createHealthRecord(
-  id: string,
-  data: Omit<HealthRecord, "id" | "createdAt" | "updatedAt">
-): Promise<void> {
-  return createDocument(COLLECTION, id, { ...data, id });
-}
-
-export async function updateHealthRecord(
-  id: string,
-  data: Partial<HealthRecord>
-): Promise<void> {
-  return updateDocument(COLLECTION, id, data);
+/**
+ * Fetch only the most recent health log for a user.
+ */
+export async function getLatestHealthLog(
+  userId: string
+): Promise<HealthLog | null> {
+  const constraints: QueryConstraint[] = [
+    where("userId", "==", userId),
+    orderBy("timestamp", "desc"),
+    limit(1),
+  ];
+  const results = await queryDocuments<HealthLog>(COLLECTION, constraints);
+  return results.length > 0 ? results[0] : null;
 }
