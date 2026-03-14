@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone output for faster builds and containerized deployments
-  output: "standalone",
 
   // ─── Performance ──────────────────────────────────────────────────
   experimental: {

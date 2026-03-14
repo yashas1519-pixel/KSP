@@ -9,6 +9,6 @@ interface StaffProfileCardProps {
   profile: StaffProfile;
 }
 
-export function StaffProfileCard({ profile: _profile }: StaffProfileCardProps) {
-  return null;
+export function StaffProfileCard({ profile }: StaffProfileCardProps) {
+  return <div data-uid={profile.uid} />;
 }
