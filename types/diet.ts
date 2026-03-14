@@ -1,38 +1,63 @@
-export interface DietPlan {
+import { BMICategory } from "@/constants/bmi";
+
+// ─── Diet Plan Input (sent to Claude) ───────────────────────────────
+
+export interface DietPlanInput {
+  uid: string;
+  bmiCategory: BMICategory;
+  dietPreference: "veg" | "non_veg";
+  ageYears: number;
+  gender: string;
+  dutyType: "field" | "administrative";
+  existingConditions: string[];
+  language: "en" | "kn";
+}
+
+// ─── Diet Plan Output (returned from Claude) ───────────────────────
+
+export interface DietFoodItem {
+  nameEn: string;
+  nameKn: string;
+  portion: string;
+  calories: number;
+}
+
+export interface DietMeal {
+  items: DietFoodItem[];
+  totalCalories: number;
+}
+
+export interface DietDay {
+  day: string;
+  dayKn: string;
+  breakfast: DietMeal;
+  lunch: DietMeal;
+  dinner: DietMeal;
+  dailyTotalCalories: number;
+}
+
+export interface DietPlanOutput {
+  weeklyPlan: DietDay[];
+  dailyWaterLitres: number;
+  weeklyCalorieTarget: number;
+  nutritionNotes: {
+    en: string;
+    kn: string;
+  };
+}
+
+// ─── Stored in Firestore ────────────────────────────────────────────
+
+export type PlanStatus = "pending_approval" | "approved" | "active" | "archived";
+
+export interface StoredDietPlan {
   id: string;
   userId: string;
+  plan: DietPlanOutput;
+  status: PlanStatus;
   generatedAt: Date;
-  status: "pending" | "approved" | "active" | "archived";
-  totalCalories: number;
-  meals: Meal[];
-  notes?: string;
-  aiGenerated: boolean;
+  approvedBy?: string;
+  approvedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface Meal {
-  name: string;
-  type: "breakfast" | "lunch" | "dinner" | "snack";
-  items: MealItem[];
-  totalCalories: number;
-}
-
-export interface MealItem {
-  name: string;
-  quantity: string;
-  calories: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-}
-
-export interface DietGenerationRequest {
-  userId: string;
-  bmi: number;
-  weightKg: number;
-  heightCm: number;
-  dietaryPreferences?: string[];
-  allergies?: string[];
-  goal: "lose_weight" | "maintain" | "gain_weight";
 }

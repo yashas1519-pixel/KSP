@@ -1,35 +1,56 @@
-export interface ExercisePlan {
-  id: string;
-  userId: string;
-  generatedAt: Date;
-  status: "pending" | "approved" | "active" | "archived";
-  exercises: Exercise[];
+import { BMICategory } from "@/constants/bmi";
+import type { PlanStatus } from "./diet";
+
+// ─── Exercise Plan Input (sent to Claude) ───────────────────────────
+
+export interface ExercisePlanInput {
+  uid: string;
+  bmiCategory: BMICategory;
+  ageYears: number;
+  gender: string;
+  dutyType: "field" | "administrative";
+  existingConditions: string[];
+}
+
+// ─── Exercise Plan Output (returned from Claude) ────────────────────
+
+export interface ExerciseItem {
+  nameEn: string;
+  nameKn: string;
+  sets: number;
+  reps: string;
   durationMinutes: number;
-  difficulty: "beginner" | "intermediate" | "advanced";
-  notes?: string;
-  aiGenerated: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  notes: string;
 }
 
-export interface Exercise {
-  name: string;
-  type: "cardio" | "strength" | "flexibility" | "balance";
-  sets?: number;
-  reps?: number;
-  durationMinutes?: number;
-  caloriesBurned?: number;
-  instructions?: string;
+export interface ExerciseDay {
+  day: string;
+  dayKn: string;
+  focus: string;
+  focusKn: string;
+  exercises: ExerciseItem[];
+  totalDurationMinutes: number;
+  restDay: boolean;
 }
 
-export interface ExerciseLog {
+export interface ExercisePlanOutput {
+  weeklyPlan: ExerciseDay[];
+  weeklyNotes: {
+    en: string;
+    kn: string;
+  };
+}
+
+// ─── Stored in Firestore ────────────────────────────────────────────
+
+export interface StoredExercisePlan {
   id: string;
   userId: string;
-  exercisePlanId: string;
-  date: Date;
-  completed: boolean;
-  exercisesCompleted: string[];
-  notes?: string;
+  plan: ExercisePlanOutput;
+  status: PlanStatus;
+  generatedAt: Date;
+  approvedBy?: string;
+  approvedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
