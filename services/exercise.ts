@@ -13,6 +13,7 @@ import {
 } from "@/lib/firebase/firestore";
 import type { StoredExercisePlan } from "@/types/exercise";
 import type { QueryConstraint } from "firebase/firestore";
+import { checkPlanApprovedAlert } from "@/lib/monitoring";
 
 const COLLECTION = "exercise_plans";
 
@@ -78,11 +79,15 @@ export async function approveExercisePlan(
   planId: string,
   approvedByUid: string
 ): Promise<void> {
-  return updateDocument(COLLECTION, planId, {
+  const plan = await getExercisePlan(planId);
+  await updateDocument(COLLECTION, planId, {
     status: "approved",
     approvedBy: approvedByUid,
     approvedAt: new Date(),
   });
+  if (plan?.userId) {
+    await checkPlanApprovedAlert(plan.userId, "exercise");
+  }
 }
 
 /**

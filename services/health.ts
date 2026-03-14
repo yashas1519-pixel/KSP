@@ -11,6 +11,7 @@ import {
 } from "@/lib/firebase/firestore";
 import { calculateBMI, classifyBMI } from "@/lib/utils/bmi";
 import { BMICategory } from "@/constants/bmi";
+import { checkBMIAlerts } from "@/lib/monitoring";
 import type { QueryConstraint } from "firebase/firestore";
 
 export interface HealthLog {
@@ -32,6 +33,7 @@ const COLLECTION = "health_logs";
 /**
  * Create a new health log entry.
  * Automatically calculates BMI and category from weight and height.
+ * Triggers BMI alerts if category is concerning.
  */
 export async function createHealthLog(
   userId: string,
@@ -55,6 +57,9 @@ export async function createHealthLog(
     notes,
     timestamp: new Date(),
   });
+
+  // Fire BMI alert if weight is concerning
+  await checkBMIAlerts(userId, bmiCategory);
 
   return id;
 }
