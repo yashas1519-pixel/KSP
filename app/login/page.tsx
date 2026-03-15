@@ -184,6 +184,18 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <a
+                href={ROUTES.FORGOT_PASSWORD}
+                className="text-sm font-medium hover:underline"
+                style={{ color: "#1A3C6B" }}
+              >
+                <span className="font-kannada">ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?</span>
+                <span className="ml-1">Forgot password?</span>
+              </a>
+            </div>
+
             {/* Error Message — Bilingual */}
             {error && (
               <div

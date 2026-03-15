@@ -164,5 +164,21 @@ service cloud.firestore {
       allow write: if isAuthenticated()
         && request.auth.uid == uid;
     }
+
+    // ============================================================
+    // /otp_requests/{email}
+    // Server-side only via Admin SDK — no client access ever
+    // ============================================================
+    match /otp_requests/{email} {
+      allow read, write: if false;
+    }
+
+    // ============================================================
+    // /password_reset_tokens/{token}
+    // Server-side only via Admin SDK — no client access ever
+    // ============================================================
+    match /password_reset_tokens/{token} {
+      allow read, write: if false;
+    }
   }
 }
