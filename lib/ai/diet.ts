@@ -1,21 +1,20 @@
 /**
- * Claude API integration for AI-powered diet plan generation.
+ * Google Gemini API integration for AI-powered diet plan generation.
  * SERVER-SIDE ONLY — called from API routes.
  */
 
 import "server-only";
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { DietPlanInput, DietPlanOutput } from "@/types/diet";
 import { BMI_CATEGORY_LABELS } from "@/constants/bmi";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const SYSTEM_PROMPT = `You are a certified nutritionist and fitness expert specialising in 
 diet plans for Indian police personnel in Karnataka, India.
 
-You must respond ONLY with a valid JSON object. No preamble, no 
-markdown, no explanation — raw JSON only.
+You must respond with ONLY a valid JSON object. No explanation, no markdown, no code blocks. Raw JSON only starting with { and ending with }.
 
 Rules:
 - Use locally available Karnataka foods (ragi, jowar, rice, sambar, 
@@ -93,67 +92,73 @@ function validateDietPlan(data: unknown): data is DietPlanOutput {
   return true;
 }
 
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes("rate_limit") || msg.includes("429") || msg.includes("quota");
+  }
+  return false;
+}
+
+async function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateDietPlan(
   input: DietPlanInput
 ): Promise<DietPlanOutput> {
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not configured");
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const userPrompt = buildDietPrompt(input);
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  async function callClaude(): Promise<DietPlanOutput> {
-    const response = await fetch(CLAUDE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01",
+  const userPrompt = buildDietPrompt(input);
+  const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
+
+  async function callGemini(): Promise<DietPlanOutput> {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: "application/json",
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Claude API error ${response.status}: ${errorBody}`);
+    const text = result.response.text();
+
+    if (!text) {
+      throw new Error("No text content in Gemini response");
     }
 
-    const data = await response.json();
-
-    // Extract text content from Claude response
-    const textBlock = data.content?.find(
-      (block: { type: string }) => block.type === "text"
-    );
-    if (!textBlock?.text) {
-      throw new Error("No text content in Claude response");
-    }
-
-    // Parse JSON from response (handle possible markdown wrapping)
-    let jsonText = textBlock.text.trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-
-    const parsed = JSON.parse(jsonText);
+    const parsed = JSON.parse(text);
 
     if (!validateDietPlan(parsed)) {
-      throw new Error("Claude returned invalid diet plan structure");
+      throw new Error("Gemini returned invalid diet plan structure");
     }
 
     return parsed;
   }
 
   // Try once; if invalid JSON, retry once
+  // If rate-limited, wait 5s and retry
   try {
-    return await callClaude();
+    return await callGemini();
   } catch (firstError) {
+    if (isRateLimitError(firstError)) {
+      await delay(5000);
+      try {
+        return await callGemini();
+      } catch {
+        throw new Error(
+          "AI service busy. Please try again in a minute. / AI ಸೇವೆ ನಿಧಾನವಾಗಿದೆ. ಒಂದು ನಿಮಿಷದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+        );
+      }
+    }
+    // Non-rate-limit error: retry once
     try {
-      return await callClaude();
+      return await callGemini();
     } catch {
       throw firstError;
     }

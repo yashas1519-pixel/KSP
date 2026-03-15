@@ -1,20 +1,20 @@
 /**
- * Claude API integration for AI-powered exercise plan generation.
+ * Google Gemini API integration for AI-powered exercise plan generation.
  * SERVER-SIDE ONLY — called from API routes.
  */
 
 import "server-only";
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ExercisePlanInput, ExercisePlanOutput } from "@/types/exercise";
 import { BMI_CATEGORY_LABELS } from "@/constants/bmi";
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const SYSTEM_PROMPT = `You are a certified fitness trainer specialising in physical training 
 for Karnataka State Police personnel.
 
-Respond ONLY with valid JSON. No preamble or markdown.
+You must respond with ONLY a valid JSON object. No explanation, no markdown, no code blocks. Raw JSON only starting with { and ending with }.
 
 Rules:
 - Plans must follow Karnataka Police PT (physical training) standards
@@ -86,65 +86,73 @@ function validateExercisePlan(data: unknown): data is ExercisePlanOutput {
   return true;
 }
 
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes("rate_limit") || msg.includes("429") || msg.includes("quota");
+  }
+  return false;
+}
+
+async function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateExercisePlan(
   input: ExercisePlanInput
 ): Promise<ExercisePlanOutput> {
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not configured");
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const userPrompt = buildExercisePrompt(input);
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  async function callClaude(): Promise<ExercisePlanOutput> {
-    const response = await fetch(CLAUDE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01",
+  const userPrompt = buildExercisePrompt(input);
+  const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
+
+  async function callGemini(): Promise<ExercisePlanOutput> {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: "application/json",
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Claude API error ${response.status}: ${errorBody}`);
+    const text = result.response.text();
+
+    if (!text) {
+      throw new Error("No text content in Gemini response");
     }
 
-    const data = await response.json();
-
-    const textBlock = data.content?.find(
-      (block: { type: string }) => block.type === "text"
-    );
-    if (!textBlock?.text) {
-      throw new Error("No text content in Claude response");
-    }
-
-    let jsonText = textBlock.text.trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-
-    const parsed = JSON.parse(jsonText);
+    const parsed = JSON.parse(text);
 
     if (!validateExercisePlan(parsed)) {
-      throw new Error("Claude returned invalid exercise plan structure");
+      throw new Error("Gemini returned invalid exercise plan structure");
     }
 
     return parsed;
   }
 
   // Try once; if invalid JSON, retry once
+  // If rate-limited, wait 5s and retry
   try {
-    return await callClaude();
+    return await callGemini();
   } catch (firstError) {
+    if (isRateLimitError(firstError)) {
+      await delay(5000);
+      try {
+        return await callGemini();
+      } catch {
+        throw new Error(
+          "AI service busy. Please try again in a minute. / AI ಸೇವೆ ನಿಧಾನವಾಗಿದೆ. ಒಂದು ನಿಮಿಷದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+        );
+      }
+    }
+    // Non-rate-limit error: retry once
     try {
-      return await callClaude();
+      return await callGemini();
     } catch {
       throw firstError;
     }

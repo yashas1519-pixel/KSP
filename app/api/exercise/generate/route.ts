@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { generateExercisePlan } from "@/lib/claude/exercise";
+import { generateExercisePlan } from "@/lib/ai/exercise";
 import { getDocument, createDocument } from "@/lib/firebase/firestore";
 import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
 import type { StaffProfile } from "@/types/user";

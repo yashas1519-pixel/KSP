@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { generateDietPlan } from "@/lib/claude/diet";
+import { generateDietPlan } from "@/lib/ai/diet";
 import { getDocument, createDocument } from "@/lib/firebase/firestore";
 import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
 import type { StaffProfile } from "@/types/user";
