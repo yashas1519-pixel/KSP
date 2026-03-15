@@ -404,6 +404,7 @@ const STEP_TITLES = [
 export function StaffProfileForm({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user } = useAuth();
 
   const step1Form = useForm<Step1Data>({
@@ -443,6 +444,7 @@ export function StaffProfileForm({ onComplete }: { onComplete: () => void }) {
     if (!user) return;
 
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       const s1 = step1Form.getValues();
       const s2 = step2Form.getValues();
@@ -482,8 +484,12 @@ export function StaffProfileForm({ onComplete }: { onComplete: () => void }) {
       );
 
       onComplete();
-    } catch {
-      // Error is handled by the caller
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      setErrorMessage(
+        `ಪ್ರೊಫೈಲ್ ಉಳಿಸಲು ವಿಫಲವಾಗಿದೆ / Failed to save profile: ${message}`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -491,6 +497,23 @@ export function StaffProfileForm({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="mx-auto w-full max-w-lg">
+      {/* Error banner */}
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-start justify-between gap-2">
+            <p>{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="shrink-0 text-red-400 hover:text-red-600"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Step indicators */}
       <div className="mb-6 flex items-center justify-center gap-2">
         {STEP_TITLES.map((title, i) => (

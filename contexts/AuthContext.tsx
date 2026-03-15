@@ -18,6 +18,7 @@ interface AuthContextValue {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   role: Role | null;
+  mustChangePassword: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,10 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (userDoc) {
             setUser(userDoc);
             setRole(userDoc.role);
+            setMustChangePassword(userDoc.mustChangePassword === true);
           } else {
             // User exists in Auth but not in Firestore — clear state
             setUser(null);
             setRole(null);
+            setMustChangePassword(false);
           }
         } catch {
           // Firestore read failed — don't hang forever
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirebaseUser(null);
         setUser(null);
         setRole(null);
+        setMustChangePassword(false);
       }
 
       setLoading(false);
@@ -92,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, firebaseUser, role, loading, signIn, signOut }}
+      value={{ user, firebaseUser, role, mustChangePassword, loading, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

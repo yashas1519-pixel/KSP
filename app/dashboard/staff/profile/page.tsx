@@ -27,10 +27,12 @@ function ProfileContent() {
   const [editWaist, setEditWaist] = useState("");
   const [editAchievements, setEditAchievements] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setFetchError(null);
     try {
       const [profileData, logData] = await Promise.all([
         getStaffProfile(user.uid),
@@ -46,6 +48,10 @@ function ProfileContent() {
           profileData.achievements?.join("\n") || ""
         );
       }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error";
+      setFetchError(`ಪ್ರೊಫೈಲ್ ಲೋಡ್ ವಿಫಲ / Failed to load profile: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -87,6 +93,29 @@ function ProfileContent() {
         <Skeleton className="h-8 w-1/3" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+
+  // If fetch failed → show error with retry
+  if (fetchError) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-6">
+        <Card className="w-full max-w-md border-0 shadow-lg">
+          <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-2xl">
+              ⚠️
+            </div>
+            <p className="text-sm text-red-700">{fetchError}</p>
+            <Button
+              onClick={fetchData}
+              className="text-white"
+              style={{ backgroundColor: "#1A3C6B" }}
+            >
+              ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ / Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

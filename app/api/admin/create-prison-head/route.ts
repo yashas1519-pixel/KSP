@@ -18,6 +18,8 @@ import {
 } from "@/lib/firebase/firestore";
 import { Role } from "@/constants/roles";
 import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
+import { generatePassword } from "@/lib/utils/password";
+import { sendWelcomeEmail } from "@/lib/email";
 import type { User } from "@/types/user";
 import { getPrisonById, updatePrison } from "@/services/prisons";
 
@@ -91,16 +93,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Step 5: Create Firebase Auth user ─────────────────────
-    const tempPassword = crypto.randomUUID().slice(0, 12);
+    // ── Step 5: Generate strong password & create Firebase Auth user ──
+    const generatedPassword = generatePassword();
 
     const newUser = await adminAuth.createUser({
       email,
-      password: tempPassword,
+      password: generatedPassword,
       displayName: fullName,
     });
 
     // ── Step 6: Create Firestore user document ────────────────
+    // IMPORTANT: Never store the plain password in Firestore
     await createDocument("users", newUser.uid, {
       uid: newUser.uid,
       email,
@@ -113,20 +116,28 @@ export async function POST(request: Request) {
       rank: rank || "",
       designation,
       status: "active",
+      mustChangePassword: true,
     });
 
     // ── Step 7: Link prison to this head ──────────────────────
     await updatePrison(prisonId, { headUid: newUser.uid });
 
-    // ── Step 8: Send password reset email ─────────────────────
-    const resetLink = await adminAuth.generatePasswordResetLink(email);
+    // ── Step 8: Send welcome email with credentials ──────────
+    const emailSent = await sendWelcomeEmail(email, {
+      fullNameEn: fullName,
+      email,
+      generatedPassword,
+      role: Role.PRISON_HEAD,
+      prisonName: prison.prisonName,
+    });
 
+    // If email fails, return the temp password so it can be shared manually
     return NextResponse.json({
       success: true,
       uid: newUser.uid,
       email,
-      resetLink,
-      tempPasswordSent: true,
+      emailSent,
+      ...(emailSent ? {} : { tempPassword: generatedPassword }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

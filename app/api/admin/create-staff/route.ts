@@ -18,6 +18,8 @@ import {
 } from "@/lib/firebase/firestore";
 import { Role } from "@/constants/roles";
 import { apiRateLimiter, getClientIP } from "@/lib/rate-limit";
+import { generatePassword } from "@/lib/utils/password";
+import { sendWelcomeEmail } from "@/lib/email";
 import type { User } from "@/types/user";
 
 export async function POST(request: Request) {
@@ -117,16 +119,17 @@ export async function POST(request: Request) {
       prisonName = body.prisonName;
     }
 
-    // ── Step 5: Create Firebase Auth user ─────────────────────
-    const tempPassword = crypto.randomUUID().slice(0, 12);
+    // ── Step 5: Generate strong password & create Firebase Auth user ──
+    const generatedPassword = generatePassword();
 
     const newUser = await adminAuth.createUser({
       email,
-      password: tempPassword,
+      password: generatedPassword,
       displayName: fullNameEn,
     });
 
     // ── Step 6: Create Firestore user document ────────────────
+    // IMPORTANT: Never store the plain password in Firestore
     await createDocument("users", newUser.uid, {
       uid: newUser.uid,
       email,
@@ -143,17 +146,25 @@ export async function POST(request: Request) {
       profileComplete: false,
       existingConditions: [],
       achievements: [],
+      mustChangePassword: true,
     });
 
-    // ── Step 7: Send password reset email so staff sets own password ──
-    const resetLink = await adminAuth.generatePasswordResetLink(email);
+    // ── Step 7: Send welcome email with credentials ──────────
+    const emailSent = await sendWelcomeEmail(email, {
+      fullNameEn,
+      email,
+      generatedPassword,
+      role: Role.STAFF,
+      prisonName,
+    });
 
+    // If email fails, return the temp password so it can be shared manually
     return NextResponse.json({
       success: true,
       uid: newUser.uid,
       email,
-      resetLink,
-      tempPasswordSent: true,
+      emailSent,
+      ...(emailSent ? {} : { tempPassword: generatedPassword }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

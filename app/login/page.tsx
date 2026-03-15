@@ -76,12 +76,14 @@ export default function LoginPage() {
       const currentUser = auth.currentUser;
 
       if (currentUser) {
-        const userDoc = await getDocument<{ role: Role }>(
+        const userDoc = await getDocument<{ role: Role; mustChangePassword?: boolean }>(
           "users",
           currentUser.uid
         );
 
-        if (userDoc?.role) {
+        if (userDoc?.mustChangePassword) {
+          router.replace(ROUTES.CHANGE_PASSWORD);
+        } else if (userDoc?.role) {
           router.replace(getRoleDashboard(userDoc.role));
         } else {
           router.replace(ROUTES.DASHBOARD);

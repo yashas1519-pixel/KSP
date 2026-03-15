@@ -9,6 +9,7 @@ export interface User {
   phoneNumber?: string;
   prisonId?: string;
   prisonName?: string;
+  mustChangePassword?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
