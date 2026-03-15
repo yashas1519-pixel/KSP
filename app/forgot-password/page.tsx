@@ -5,18 +5,10 @@ import { useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /* ────────────────── Types ────────────────── */
 
 type Step = 1 | 2 | 3;
-
-interface PasswordStrength {
-  level: "weak" | "medium" | "strong";
-  label: string;
-  color: string;
-  width: string;
-}
 
 /* ────────────────── Helpers ────────────────── */
 
@@ -26,19 +18,6 @@ function maskEmail(email: string): string {
   const first = user[0];
   const last = user[user.length - 1];
   return `${first}${"*".repeat(Math.max(user.length - 2, 2))}${last}@${domain}`;
-}
-
-function getPasswordStrength(password: string): PasswordStrength {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) score++;
-
-  if (score <= 2) return { level: "weak", label: "Weak", color: "#ef4444", width: "33%" };
-  if (score <= 3) return { level: "medium", label: "Medium", color: "#f59e0b", width: "66%" };
-  return { level: "strong", label: "Strong", color: "#22c55e", width: "100%" };
 }
 
 const PASSWORD_CHECKS = [
@@ -53,7 +32,6 @@ const PASSWORD_CHECKS = [
 export default function ForgotPasswordPage() {
   const router = useRouter();
 
-  // Step state
   const [step, setStep] = useState<Step>(1);
 
   // Step 1: Email
@@ -122,7 +100,6 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      // Move to OTP step
       setStep(2);
       setOtpExpiresAt(Date.now() + 10 * 60 * 1000);
       setTimeLeft(600);
@@ -131,7 +108,6 @@ export default function ForgotPasswordPage() {
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError(null);
 
-      // Focus first OTP input
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch {
       setEmailError("Network error. Please try again. | ನೆಟ್‌ವರ್ಕ್ ದೋಷ.");
@@ -143,26 +119,22 @@ export default function ForgotPasswordPage() {
   /* ── Step 2: OTP Input Handlers ── */
   function handleOtpChange(index: number, value: string) {
     if (value.length > 1) {
-      // Paste support: if pasting 6 digits, fill all boxes
       const digits = value.replace(/\D/g, "").slice(0, 6).split("");
       const newOtp = [...otpDigits];
       digits.forEach((d, i) => {
         if (i < 6) newOtp[i] = d;
       });
       setOtpDigits(newOtp);
-      // Focus the last filled input or the submit button
       const lastIndex = Math.min(digits.length - 1, 5);
       otpRefs.current[lastIndex]?.focus();
       return;
     }
 
-    // Single digit
     if (value && !/^\d$/.test(value)) return;
     const newOtp = [...otpDigits];
     newOtp[index] = value;
     setOtpDigits(newOtp);
 
-    // Auto-focus next
     if (value && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -241,7 +213,6 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setPasswordError(null);
 
-    // Validate all checks pass
     const allPassed = PASSWORD_CHECKS.every((c) => c.test(newPassword));
     if (!allPassed) {
       setPasswordError("Password does not meet all requirements. | ಪಾಸ್‌ವರ್ಡ್ ಅವಶ್ಯಕತೆಗಳನ್ನು ಪೂರೈಸುತ್ತಿಲ್ಲ.");
@@ -276,69 +247,82 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  /* ── Timer Format ── */
+  /* ── Computed ── */
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const timerStr = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  const timerColor = timeLeft < 120 ? "#ef4444" : "#64748b";
-  const strength = getPasswordStrength(newPassword);
+  const timerColor = timeLeft < 120 ? "#A32D2D" : "#1A3C6B";
+
+  const passedChecks = PASSWORD_CHECKS.filter((c) => c.test(newPassword)).length;
+  const strengthColors = ["#A32D2D", "#BA7517", "#C9A84C", "#3B6D11"];
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md border-0 shadow-2xl">
-        <CardHeader className="flex flex-col items-center gap-4 pb-2 pt-8">
-          {/* Icon */}
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: "#1A3C6B" }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10">
-              <circle cx="12" cy="16" r="1" />
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+    <main className="flex min-h-screen">
+      {/* ── Left Panel (hidden on mobile) ── */}
+      <div
+        className="hidden flex-col items-center justify-center md:flex"
+        style={{ backgroundColor: "#1A3C6B", width: "35%", minWidth: 320 }}
+      >
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: "#C9A84C" }}>
+          <span className="text-2xl" style={{ color: "#1A3C6B" }}>🔑</span>
+        </div>
+        <p className="font-kannada text-[13px] font-medium text-white">ಪಾಸ್‌ವರ್ಡ್ ಮರುಹೊಂದಿಸಿ</p>
+        <div className="my-3 h-px w-16" style={{ backgroundColor: "#C9A84C" }} />
+        <p className="text-[11px] text-white/80">Reset Password</p>
+        <p className="mt-2 font-kannada text-[10px]" style={{ color: "#C9A84C" }}>
+          ಸುರಕ್ಷಿತ OTP ಆಧಾರಿತ / Secure OTP Based
+        </p>
+      </div>
+
+      {/* ── Right Panel ── */}
+      <div className="flex flex-1 items-center justify-center p-6" style={{ backgroundColor: "#F5F6FA" }}>
+        <div className="w-full max-w-[420px] rounded-xl bg-white p-8 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          {/* Mobile emblem */}
+          <div className="mb-6 flex justify-center md:hidden">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: "#C9A84C" }}>
+              <span className="text-xl" style={{ color: "#1A3C6B" }}>🔑</span>
+            </div>
           </div>
 
           {/* Title */}
-          <div className="text-center">
-            <h1 className="font-kannada text-xl font-bold" style={{ color: "#1A3C6B" }}>
+          <div className="mb-4 text-center">
+            <h1 className="font-kannada text-[20px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
               ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?
             </h1>
-            <p className="text-lg font-semibold text-slate-600">Forgot Password</p>
+            <p className="text-[12px]" style={{ color: "#6b7280" }}>Forgot Password</p>
           </div>
 
           {/* Step Indicator */}
-          <div className="flex items-center gap-2">
+          <div className="mb-6 flex items-center justify-center gap-2">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-medium transition-colors"
                   style={{
-                    backgroundColor: step >= s ? "#1A3C6B" : "#e2e8f0",
-                    color: step >= s ? "#ffffff" : "#94a3b8",
+                    backgroundColor: step > s ? "#C9A84C" : step === s ? "#1A3C6B" : "#e5e7eb",
+                    color: step >= s ? "#ffffff" : "#6b7280",
                   }}
                 >
-                  {s}
+                  {step > s ? "✓" : s}
                 </div>
                 {s < 3 && (
                   <div
-                    className="h-0.5 w-8 transition-colors"
-                    style={{ backgroundColor: step > s ? "#1A3C6B" : "#e2e8f0" }}
+                    className="h-0.5 w-6 transition-colors"
+                    style={{ backgroundColor: step > s ? "#C9A84C" : "#e5e7eb" }}
                   />
                 )}
               </div>
             ))}
           </div>
-        </CardHeader>
 
-        <CardContent className="px-8 pb-8 pt-4">
           {/* ═══════════════ STEP 1: Email ═══════════════ */}
           {step === 1 && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="forgot-email" className="block text-sm font-medium">
-                  <span className="font-kannada text-slate-800">ಇಮೇಲ್</span>
-                  <span className="ml-2 text-slate-500">Email</span>
+                <label htmlFor="forgot-email" className="block">
+                  <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>ಇಮೇಲ್</span>
+                  <br />
+                  <span className="text-[10px]" style={{ color: "#6b7280" }}>Email</span>
                 </label>
                 <Input
                   id="forgot-email"
@@ -350,16 +334,17 @@ export default function ForgotPasswordPage() {
                   required
                   disabled={emailLoading}
                   autoComplete="email"
-                  className="h-11"
+                  className="h-10 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
                 />
-                <p className="text-xs text-slate-400">
-                  Enter your registered email address / ನಿಮ್ಮ ನೋಂದಾಯಿತ ಇಮೇಲ್ ನಮೂದಿಸಿ
+                <p className="text-[10px]" style={{ color: "#6b7280" }}>
+                  Enter your registered email / ನಿಮ್ಮ ನೋಂದಾಯಿತ ಇಮೇಲ್ ನಮೂದಿಸಿ
                 </p>
               </div>
 
               {emailError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm" role="alert">
-                  <p className="text-red-600">{emailError}</p>
+                <div className="rounded-lg p-3 text-[12px]" style={{ backgroundColor: "#FCEBEB", border: "0.5px solid #A32D2D20" }} role="alert">
+                  <p style={{ color: "#A32D2D" }}>{emailError}</p>
                 </div>
               )}
 
@@ -367,7 +352,7 @@ export default function ForgotPasswordPage() {
                 type="button"
                 onClick={handleSendOTP}
                 disabled={emailLoading}
-                className="h-11 w-full text-base font-semibold text-white transition-all hover:opacity-90"
+                className="h-10 w-full rounded-lg text-[13px] font-medium text-white transition-all hover:opacity-90"
                 style={{ backgroundColor: "#1A3C6B" }}
               >
                 {emailLoading ? (
@@ -383,9 +368,9 @@ export default function ForgotPasswordPage() {
                 )}
               </Button>
 
-              <p className="text-center text-sm">
-                <a href={ROUTES.LOGIN} className="font-medium" style={{ color: "#1A3C6B" }}>
-                  ← Back to Login / ಲಾಗಿನ್‌ಗೆ ಹಿಂತಿರುಗಿ
+              <p className="text-center text-[12px]">
+                <a href={ROUTES.LOGIN} className="font-medium hover:underline" style={{ color: "#1A3C6B" }}>
+                  ← ಲಾಗಿನ್‌ಗೆ ಹಿಂತಿರುಗಿ / Back to Login
                 </a>
               </p>
             </div>
@@ -393,17 +378,17 @@ export default function ForgotPasswordPage() {
 
           {/* ═══════════════ STEP 2: OTP ═══════════════ */}
           {step === 2 && (
-            <div className="space-y-5">
-              <p className="text-center text-sm text-slate-500">
-                OTP sent to <strong>{maskEmail(email)}</strong>
+            <div className="space-y-4">
+              <p className="text-center text-[12px]" style={{ color: "#6b7280" }}>
+                OTP sent to <strong style={{ color: "#1a1a2e" }}>{maskEmail(email)}</strong>
               </p>
 
               {/* Timer */}
-              <p className="text-center text-sm font-mono font-bold" style={{ color: timerColor }}>
-                ⏰ OTP expires in {timerStr}
+              <p className="text-center font-mono text-[14px] font-medium" style={{ color: timerColor }}>
+                ⏰ {timerStr}
               </p>
 
-              {/* OTP Input Boxes */}
+              {/* OTP Boxes */}
               <div className="flex justify-center gap-2">
                 {otpDigits.map((digit, i) => (
                   <input
@@ -421,20 +406,30 @@ export default function ForgotPasswordPage() {
                       handleOtpChange(0, pasted);
                     }}
                     disabled={otpLoading || timeLeft <= 0}
-                    className="h-14 w-12 rounded-lg border-2 border-slate-200 bg-white text-center text-xl font-bold text-slate-800 outline-none transition-colors focus:border-[#1A3C6B] disabled:opacity-50"
+                    className="h-12 w-10 rounded-lg bg-white text-center text-lg font-medium outline-none transition-all disabled:opacity-50"
+                    style={{
+                      border: digit ? "2px solid #C9A84C" : "1.5px solid #e5e7eb",
+                      color: "#1a1a2e",
+                    }}
+                    onFocus={(e) => {
+                      if (!digit) e.currentTarget.style.border = "2px solid #1A3C6B";
+                    }}
+                    onBlur={(e) => {
+                      if (!digit) e.currentTarget.style.border = "1.5px solid #e5e7eb";
+                    }}
                     aria-label={`OTP digit ${i + 1}`}
                   />
                 ))}
               </div>
 
-              {/* Attempts remaining */}
-              <p className="text-center text-xs text-slate-400">
+              {/* Attempts */}
+              <p className="text-center text-[10px]" style={{ color: "#6b7280" }}>
                 {attemptsLeft} attempt(s) remaining / {attemptsLeft} ಪ್ರಯತ್ನ(ಗಳು) ಉಳಿದಿವೆ
               </p>
 
               {otpError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm" role="alert">
-                  <p className="text-red-600">{otpError}</p>
+                <div className="rounded-lg p-3 text-[12px]" style={{ backgroundColor: "#FCEBEB", border: "0.5px solid #A32D2D20" }} role="alert">
+                  <p style={{ color: "#A32D2D" }}>{otpError}</p>
                 </div>
               )}
 
@@ -442,7 +437,7 @@ export default function ForgotPasswordPage() {
                 type="button"
                 onClick={handleVerifyOTP}
                 disabled={otpLoading || otpDigits.join("").length !== 6 || timeLeft <= 0}
-                className="h-11 w-full text-base font-semibold text-white transition-all hover:opacity-90"
+                className="h-10 w-full rounded-lg text-[13px] font-medium text-white transition-all hover:opacity-90"
                 style={{ backgroundColor: "#1A3C6B" }}
               >
                 {otpLoading ? (
@@ -459,18 +454,18 @@ export default function ForgotPasswordPage() {
               </Button>
 
               {/* Resend */}
-              <p className="text-center text-sm">
+              <p className="text-center text-[12px]">
                 {resendCooldown > 0 ? (
-                  <span className="text-slate-400">Resend in {resendCooldown}s</span>
+                  <span style={{ color: "#6b7280" }}>Resend in {resendCooldown}s</span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleResendOTP}
                     disabled={emailLoading}
                     className="font-medium underline"
-                    style={{ color: "#1A3C6B" }}
+                    style={{ color: "#C9A84C" }}
                   >
-                    Resend OTP / OTP ಮರುಕಳುಹಿಸಿ
+                    OTP ಮರುಕಳುಹಿಸಿ / Resend OTP
                   </button>
                 )}
               </p>
@@ -479,12 +474,12 @@ export default function ForgotPasswordPage() {
 
           {/* ═══════════════ STEP 3: New Password ═══════════════ */}
           {step === 3 && (
-            <form onSubmit={handleResetPassword} className="space-y-5">
-              {/* New Password */}
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="new-pass" className="block text-sm font-medium">
-                  <span className="font-kannada text-slate-800">ಹೊಸ ಪಾಸ್‌ವರ್ಡ್</span>
-                  <span className="ml-2 text-slate-500">New Password</span>
+                <label htmlFor="new-pass" className="block">
+                  <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>ಹೊಸ ಪಾಸ್‌ವರ್ಡ್</span>
+                  <br />
+                  <span className="text-[10px]" style={{ color: "#6b7280" }}>New Password</span>
                 </label>
                 <div className="relative">
                   <Input
@@ -496,51 +491,54 @@ export default function ForgotPasswordPage() {
                     required
                     disabled={passwordLoading}
                     autoComplete="new-password"
-                    className="h-11 pr-12"
+                    className="h-10 rounded-lg border-[0.5px] pr-12 text-[13px]"
+                    style={{ borderColor: "#e5e7eb" }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] hover:underline"
+                    style={{ color: "#6b7280" }}
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
 
-                {/* Strength Indicator */}
+                {/* Strength - 4 segments */}
                 {newPassword && (
-                  <div className="space-y-1">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{ width: strength.width, backgroundColor: strength.color }}
-                      />
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="h-1 flex-1 rounded-full transition-colors"
+                          style={{
+                            backgroundColor: i < passedChecks ? strengthColors[passedChecks - 1] : "#e5e7eb",
+                          }}
+                        />
+                      ))}
                     </div>
-                    <p className="text-xs font-semibold" style={{ color: strength.color }}>
-                      {strength.label}
-                    </p>
+                    <div className="space-y-0.5">
+                      {PASSWORD_CHECKS.map((check, i) => {
+                        const ok = check.test(newPassword);
+                        return (
+                          <p key={i} className="text-[10px]" style={{ color: ok ? "#3B6D11" : "#6b7280" }}>
+                            {ok ? "✓" : "○"} {check.kn} / {check.en}
+                          </p>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-
-                {/* Requirements Checklist */}
-                <div className="space-y-1 pt-1">
-                  {PASSWORD_CHECKS.map((check, i) => {
-                    const passed = check.test(newPassword);
-                    return (
-                      <p key={i} className="text-xs" style={{ color: passed ? "#22c55e" : "#94a3b8" }}>
-                        {passed ? "✓" : "○"} {check.en}
-                      </p>
-                    );
-                  })}
-                </div>
               </div>
 
-              {/* Confirm Password */}
+              {/* Confirm */}
               <div className="space-y-1.5">
-                <label htmlFor="confirm-pass" className="block text-sm font-medium">
-                  <span className="font-kannada text-slate-800">ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ</span>
-                  <span className="ml-2 text-slate-500">Confirm Password</span>
+                <label htmlFor="confirm-pass" className="block">
+                  <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ</span>
+                  <br />
+                  <span className="text-[10px]" style={{ color: "#6b7280" }}>Confirm Password</span>
                 </label>
                 <Input
                   id="confirm-pass"
@@ -551,20 +549,21 @@ export default function ForgotPasswordPage() {
                   required
                   disabled={passwordLoading}
                   autoComplete="new-password"
-                  className="h-11"
+                  className="h-10 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
                 />
               </div>
 
               {passwordError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm" role="alert">
-                  <p className="text-red-600">{passwordError}</p>
+                <div className="rounded-lg p-3 text-[12px]" style={{ backgroundColor: "#FCEBEB", border: "0.5px solid #A32D2D20" }} role="alert">
+                  <p style={{ color: "#A32D2D" }}>{passwordError}</p>
                 </div>
               )}
 
               <Button
                 type="submit"
                 disabled={passwordLoading}
-                className="h-11 w-full text-base font-semibold text-white transition-all hover:opacity-90"
+                className="h-10 w-full rounded-lg text-[13px] font-medium text-white transition-all hover:opacity-90"
                 style={{ backgroundColor: "#1A3C6B" }}
               >
                 {passwordLoading ? (
@@ -582,12 +581,11 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          {/* Footer */}
-          <p className="mt-6 text-center text-xs text-slate-400">
+          <p className="mt-6 text-center text-[10px]" style={{ color: "#6b7280" }}>
             Karnataka State Police — Staff Fitness Portal
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </main>
   );
 }

@@ -1,30 +1,59 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(240 10% 3.9%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(240 10% 3.9%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(240 10% 3.9%);
-  --color-primary: hsl(240 5.9% 10%);
-  --color-primary-foreground: hsl(0 0% 98%);
-  --color-secondary: hsl(240 4.8% 95.9%);
-  --color-secondary-foreground: hsl(240 5.9% 10%);
-  --color-muted: hsl(240 4.8% 95.9%);
-  --color-muted-foreground: hsl(240 3.8% 46.1%);
-  --color-accent: hsl(240 4.8% 95.9%);
-  --color-accent-foreground: hsl(240 5.9% 10%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(240 5.9% 90%);
-  --color-input: hsl(240 5.9% 90%);
-  --color-ring: hsl(240 5.9% 10%);
-  --color-chart-1: hsl(12 76% 61%);
-  --color-chart-2: hsl(173 58% 39%);
-  --color-chart-3: hsl(197 37% 24%);
-  --color-chart-4: hsl(43 74% 66%);
-  --color-chart-5: hsl(27 87% 67%);
+  --color-background: #F5F6FA;
+  --color-foreground: #1a1a2e;
+  --color-card: #ffffff;
+  --color-card-foreground: #1a1a2e;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1a1a2e;
+  --color-primary: #1A3C6B;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #F5F6FA;
+  --color-secondary-foreground: #1A3C6B;
+  --color-muted: #F5F6FA;
+  --color-muted-foreground: #6b7280;
+  --color-accent: #C9A84C;
+  --color-accent-foreground: #1A3C6B;
+  --color-destructive: #A32D2D;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #1A3C6B;
+
+  /* KSP Brand Colors */
+  --color-navy: #1A3C6B;
+  --color-gold: #C9A84C;
+  --color-ksp-light: #F5F6FA;
+  --color-ksp-text: #1a1a2e;
+  --color-ksp-muted: #6b7280;
+  --color-ksp-border: #e5e7eb;
+
+  /* BMI Colors */
+  --color-bmi-green: #3B6D11;
+  --color-bmi-amber: #BA7517;
+  --color-bmi-red: #A32D2D;
+  --color-bmi-blue: #185FA5;
+
+  /* BMI Badge Backgrounds */
+  --color-bmi-underweight-bg: #E6F1FB;
+  --color-bmi-underweight-text: #0C447C;
+  --color-bmi-normal-bg: #EAF3DE;
+  --color-bmi-normal-text: #27500A;
+  --color-bmi-overweight-bg: #FAEEDA;
+  --color-bmi-overweight-text: #633806;
+  --color-bmi-obese1-bg: #FAECE7;
+  --color-bmi-obese1-text: #4A1B0C;
+  --color-bmi-obese2-bg: #FCEBEB;
+  --color-bmi-obese2-text: #501313;
+
+  /* Charts */
+  --color-chart-1: #185FA5;
+  --color-chart-2: #3B6D11;
+  --color-chart-3: #BA7517;
+  --color-chart-4: #A32D2D;
+  --color-chart-5: #C9A84C;
+
   --radius: 0.5rem;
   --font-sans: var(--font-sans);
   --font-kannada: var(--font-kannada);
@@ -38,5 +67,46 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Headings: weight 500, never 700 */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+  }
+
+  /* Page transition */
+  main {
+    animation: fadeIn 200ms ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@layer utilities {
+  .mobile-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bottom-tab-bar {
+    display: none;
+  }
+
+  .desktop-sidebar {
+    display: flex;
+  }
+
+  @media (max-width: 768px) {
+    .bottom-tab-bar {
+      display: flex;
+    }
+    .desktop-sidebar {
+      display: none;
+    }
   }
 }

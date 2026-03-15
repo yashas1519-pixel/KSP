@@ -9,7 +9,6 @@ import { Role } from "@/constants/roles";
 import { ROUTES } from "@/constants/routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const PASSWORD_RULES = {
   minLength: 8,
@@ -74,29 +73,22 @@ export default function ChangePasswordPage() {
   const { user, firebaseUser, role, mustChangePassword, loading } = useAuth();
   const router = useRouter();
 
-  // Guard: if not logged in, redirect to login
-  // Guard: if no mustChangePassword flag, redirect to dashboard
   useEffect(() => {
     if (loading) return;
-
     if (!firebaseUser) {
       router.replace(ROUTES.LOGIN);
       return;
     }
-
     if (!mustChangePassword && user) {
       router.replace(role ? getRoleDashboard(role) : ROUTES.DASHBOARD);
     }
   }, [loading, firebaseUser, mustChangePassword, user, role, router]);
 
-  // Prevent back navigation — push back to this page
   useEffect(() => {
     if (!mustChangePassword) return;
-
     const handlePopState = () => {
       router.replace(ROUTES.CHANGE_PASSWORD);
     };
-
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [mustChangePassword, router]);
@@ -105,14 +97,12 @@ export default function ChangePasswordPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate password
     const validationError = validatePassword(newPassword);
     if (validationError) {
       setError(validationError);
       return;
     }
 
-    // Confirm match
     if (newPassword !== confirmPassword) {
       setError({
         en: "Passwords do not match",
@@ -133,10 +123,8 @@ export default function ChangePasswordPage() {
         return;
       }
 
-      // Step 1: Update password in Firebase Auth
       await updatePassword(currentUser, newPassword);
 
-      // Step 2: Clear the mustChangePassword flag via server API
       const idToken = await currentUser.getIdToken();
       const response = await fetch("/api/auth/clear-password-flag", {
         method: "POST",
@@ -151,8 +139,6 @@ export default function ChangePasswordPage() {
       }
 
       setSuccess(true);
-
-      // Redirect to dashboard after a brief success message
       setTimeout(() => {
         router.replace(role ? getRoleDashboard(role) : ROUTES.DASHBOARD);
       }, 1500);
@@ -174,97 +160,85 @@ export default function ChangePasswordPage() {
     }
   }
 
+  // Password strength
+  const checks = {
+    length: newPassword.length >= 8,
+    upper: PASSWORD_RULES.uppercase.test(newPassword),
+    digit: PASSWORD_RULES.digit.test(newPassword),
+    special: PASSWORD_RULES.special.test(newPassword),
+  };
+  const passed = Object.values(checks).filter(Boolean).length;
+
+  const strengthColors = ["#A32D2D", "#BA7517", "#C9A84C", "#3B6D11"];
+
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#1A3C6B]" />
+      <main className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "#F5F6FA" }}>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300" style={{ borderTopColor: "#1A3C6B" }} />
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md border-0 shadow-2xl">
-        <CardHeader className="flex flex-col items-center gap-4 pb-2 pt-8">
-          {/* Lock Icon */}
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: "#1A3C6B" }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-10 w-10"
-            >
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+    <main className="flex min-h-screen">
+      {/* ── Left Panel — Navy (hidden on mobile) ── */}
+      <div
+        className="hidden flex-col items-center justify-center md:flex"
+        style={{ backgroundColor: "#1A3C6B", width: "35%", minWidth: 320 }}
+      >
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: "#C9A84C" }}>
+          <span className="text-2xl" style={{ color: "#1A3C6B" }}>🔒</span>
+        </div>
+        <p className="font-kannada text-[13px] font-medium text-white">ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ</p>
+        <div className="my-3 h-px w-16" style={{ backgroundColor: "#C9A84C" }} />
+        <p className="text-[11px] text-white/80">Change Password</p>
+        <p className="mt-2 font-kannada text-[10px]" style={{ color: "#C9A84C" }}>
+          ಸುರಕ್ಷಿತ ಖಾತೆಗಾಗಿ / For account security
+        </p>
+      </div>
+
+      {/* ── Right Panel ── */}
+      <div className="flex flex-1 items-center justify-center p-6" style={{ backgroundColor: "#F5F6FA" }}>
+        <div className="w-full max-w-[420px] rounded-xl bg-white p-8 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          {/* Mobile emblem */}
+          <div className="mb-6 flex justify-center md:hidden">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: "#C9A84C" }}>
+              <span className="text-xl" style={{ color: "#1A3C6B" }}>🔒</span>
+            </div>
           </div>
 
-          {/* Title — Bilingual */}
-          <div className="text-center">
-            <h1
-              className="font-kannada text-xl font-bold"
-              style={{ color: "#1A3C6B" }}
-            >
+          {/* Title */}
+          <div className="mb-6 text-center">
+            <h1 className="font-kannada text-[20px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
               ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಿ
             </h1>
-            <p className="text-lg font-semibold text-slate-600">
-              Change Password
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              ನಿಮ್ಮ ಮೊದಲ ಲಾಗಿನ್‌ಗಾಗಿ ಹೊಸ ಪಾಸ್‌ವರ್ಡ್ ಹೊಂದಿಸಿ
-            </p>
-            <p className="text-sm text-slate-400">
-              Set a new password for your first login
-            </p>
+            <p className="text-[12px]" style={{ color: "#6b7280" }}>Change Password</p>
           </div>
-        </CardHeader>
 
-        <CardContent className="px-8 pb-8 pt-4">
           {success ? (
-            <div
-              className="rounded-lg border border-green-200 bg-green-50 p-4 text-center"
-              role="status"
-            >
-              <p className="font-kannada font-semibold text-green-700">
+            <div className="rounded-lg p-4 text-center" style={{ backgroundColor: "#EAF3DE", border: "0.5px solid #3B6D1130" }}>
+              <p className="font-kannada font-medium" style={{ color: "#27500A" }}>
                 ✅ ಪಾಸ್‌ವರ್ಡ್ ಯಶಸ್ವಿಯಾಗಿ ಬದಲಾಯಿಸಲಾಗಿದೆ!
               </p>
-              <p className="text-green-600">Password changed successfully!</p>
-              <p className="mt-2 text-sm text-green-500">
-                Redirecting to dashboard...
-              </p>
+              <p className="text-[12px]" style={{ color: "#3B6D11" }}>Password changed successfully!</p>
+              <p className="mt-2 text-[11px]" style={{ color: "#6b7280" }}>Redirecting to dashboard...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Warning Banner */}
-              <div
-                className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"
-                role="alert"
-              >
-                <p className="font-kannada font-medium text-amber-800">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Warning */}
+              <div className="rounded-lg p-3 text-[12px]" style={{ backgroundColor: "#FAEEDA", border: "0.5px solid #BA751730" }}>
+                <p className="font-kannada font-medium" style={{ color: "#633806" }}>
                   ⚠️ ಮುಂದುವರಿಯಲು ನಿಮ್ಮ ಪಾಸ್‌ವರ್ಡ್ ಬದಲಾಯಿಸಬೇಕು.
                 </p>
-                <p className="text-amber-700">
-                  You must change your password to continue.
-                </p>
+                <p style={{ color: "#BA7517" }}>You must change your password to continue.</p>
               </div>
 
               {/* New Password */}
               <div className="space-y-1.5">
-                <label
-                  htmlFor="new-password"
-                  className="block text-sm font-medium"
-                >
-                  <span className="font-kannada text-slate-800">
-                    ಹೊಸ ಪಾಸ್‌ವರ್ಡ್
-                  </span>
-                  <span className="ml-2 text-slate-500">New Password</span>
+                <label htmlFor="new-password" className="block">
+                  <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>ಹೊಸ ಪಾಸ್‌ವರ್ಡ್</span>
+                  <br />
+                  <span className="text-[10px]" style={{ color: "#6b7280" }}>New Password</span>
                 </label>
                 <Input
                   id="new-password"
@@ -276,23 +250,40 @@ export default function ChangePasswordPage() {
                   disabled={isSubmitting}
                   autoComplete="new-password"
                   minLength={8}
-                  className="h-11"
+                  className="h-10 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
                 />
-                <p className="text-xs text-slate-400">
-                  Min 8 chars, 1 uppercase, 1 number, 1 special character
-                </p>
               </div>
+
+              {/* Strength indicator */}
+              {newPassword.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="h-1 flex-1 rounded-full transition-colors"
+                        style={{
+                          backgroundColor: i < passed ? strengthColors[passed - 1] : "#e5e7eb",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="space-y-0.5 text-[10px]">
+                    <p style={{ color: checks.length ? "#3B6D11" : "#6b7280" }}>{checks.length ? "✓" : "○"} Min 8 characters</p>
+                    <p style={{ color: checks.upper ? "#3B6D11" : "#6b7280" }}>{checks.upper ? "✓" : "○"} 1 uppercase letter</p>
+                    <p style={{ color: checks.digit ? "#3B6D11" : "#6b7280" }}>{checks.digit ? "✓" : "○"} 1 number</p>
+                    <p style={{ color: checks.special ? "#3B6D11" : "#6b7280" }}>{checks.special ? "✓" : "○"} 1 special character</p>
+                  </div>
+                </div>
+              )}
 
               {/* Confirm Password */}
               <div className="space-y-1.5">
-                <label
-                  htmlFor="confirm-password"
-                  className="block text-sm font-medium"
-                >
-                  <span className="font-kannada text-slate-800">
-                    ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ
-                  </span>
-                  <span className="ml-2 text-slate-500">Confirm Password</span>
+                <label htmlFor="confirm-password" className="block">
+                  <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ</span>
+                  <br />
+                  <span className="text-[10px]" style={{ color: "#6b7280" }}>Confirm Password</span>
                 </label>
                 <Input
                   id="confirm-password"
@@ -304,55 +295,33 @@ export default function ChangePasswordPage() {
                   disabled={isSubmitting}
                   autoComplete="new-password"
                   minLength={8}
-                  className="h-11"
+                  className="h-10 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
                 />
               </div>
 
-              {/* Error Message — Bilingual */}
+              {/* Error */}
               {error && (
-                <div
-                  className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm"
-                  role="alert"
-                >
-                  <p className="font-kannada font-medium text-red-700">
-                    {error.kn}
-                  </p>
-                  <p className="text-red-600">{error.en}</p>
+                <div className="rounded-lg p-3 text-[12px]" style={{ backgroundColor: "#FCEBEB", border: "0.5px solid #A32D2D20" }} role="alert">
+                  <p className="font-kannada font-medium" style={{ color: "#A32D2D" }}>{error.kn}</p>
+                  <p style={{ color: "#501313" }}>{error.en}</p>
                 </div>
               )}
 
-              {/* Submit Button */}
+              {/* Submit */}
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="h-11 w-full text-base font-semibold text-white transition-all hover:opacity-90"
+                className="h-10 w-full rounded-lg text-[13px] font-medium text-white transition-all hover:opacity-90"
                 style={{ backgroundColor: "#1A3C6B" }}
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                    <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <span className="font-kannada">
-                      ಬದಲಾಯಿಸಲಾಗುತ್ತಿದೆ...
-                    </span>
+                    <span className="font-kannada">ಬದಲಾಯಿಸಲಾಗುತ್ತಿದೆ...</span>
                   </span>
                 ) : (
                   <span>
@@ -364,12 +333,11 @@ export default function ChangePasswordPage() {
             </form>
           )}
 
-          {/* Footer */}
-          <p className="mt-6 text-center text-xs text-slate-400">
+          <p className="mt-6 text-center text-[10px]" style={{ color: "#6b7280" }}>
             Karnataka State Police — Staff Fitness Portal
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </main>
   );
 }

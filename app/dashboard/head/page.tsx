@@ -5,8 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
 import { BMICategory, BMI_CATEGORY_LABELS } from "@/constants/bmi";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { CreateStaffModal } from "@/components/dashboard/CreateStaffModal";
-import { Navbar } from "@/components/dashboard/Navbar";
 
 import { getStaffByPrison, getPrisonHeadProfile, updateUserProfile } from "@/services/user";
 import { getPendingDietPlans, approveDietPlan, rejectDietPlan } from "@/services/diet";
@@ -22,7 +22,6 @@ import type { StoredExercisePlan } from "@/types/exercise";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -49,6 +48,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -64,9 +64,18 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// ─── KSP BMI Badge styles ──────────────────────────────────────────
+
+const BMI_BADGE: Record<BMICategory, { bg: string; text: string }> = {
+  [BMICategory.UNDERWEIGHT]: { bg: "#E6F1FB", text: "#0C447C" },
+  [BMICategory.NORMAL]: { bg: "#EAF3DE", text: "#27500A" },
+  [BMICategory.OVERWEIGHT]: { bg: "#FAEEDA", text: "#633806" },
+  [BMICategory.OBESE_1]: { bg: "#FAECE7", text: "#4A1B0C" },
+  [BMICategory.OBESE_2]: { bg: "#FCEBEB", text: "#501313" },
+};
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
-/** Convert a Firestore Timestamp-like or Date to a JS Date */
 function toJsDate(value: unknown): Date {
   if (value && typeof value === "object" && "seconds" in (value as object)) {
     return new Date(((value as { seconds: number }).seconds) * 1000);
@@ -74,15 +83,7 @@ function toJsDate(value: unknown): Date {
   return new Date(value as string | number | Date);
 }
 
-const BMI_COLORS: Record<BMICategory, { bg: string; text: string; ring: string }> = {
-  [BMICategory.UNDERWEIGHT]: { bg: "bg-blue-100", text: "text-blue-700", ring: "ring-blue-200" },
-  [BMICategory.NORMAL]: { bg: "bg-green-100", text: "text-green-700", ring: "ring-green-200" },
-  [BMICategory.OVERWEIGHT]: { bg: "bg-amber-100", text: "text-amber-700", ring: "ring-amber-200" },
-  [BMICategory.OBESE_1]: { bg: "bg-orange-100", text: "text-orange-700", ring: "ring-orange-200" },
-  [BMICategory.OBESE_2]: { bg: "bg-red-100", text: "text-red-700", ring: "ring-red-200" },
-};
-
-// ─── Types for pending items ────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────
 
 interface PendingItem {
   planId: string;
@@ -101,13 +102,12 @@ interface StaffWithHealth extends StaffProfile {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Main Dashboard Content
+// Dashboard Content
 // ═══════════════════════════════════════════════════════════════════
 
 function HeadDashboardContent() {
   const { user, firebaseUser } = useAuth();
 
-  // ─── State ──────────────────────────────────────────────────────
   const [prisonHead, setPrisonHead] = useState<PrisonHead | null>(null);
   const [staffList, setStaffList] = useState<StaffWithHealth[]>([]);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
@@ -116,7 +116,7 @@ function HeadDashboardContent() {
   const [bmiFilter, setBmiFilter] = useState<string>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Drawer state
+  // Drawer
   const [selectedStaff, setSelectedStaff] = useState<StaffWithHealth | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerHealthLogs, setDrawerHealthLogs] = useState<HealthLog[]>([]);
@@ -131,7 +131,7 @@ function HeadDashboardContent() {
   // Regenerate
   const [regenerating, setRegenerating] = useState(false);
 
-  // ─── Toast auto-dismiss ─────────────────────────────────────────
+  // Toast auto-dismiss
   useEffect(() => {
     if (!toastMessage) return;
     const timer = setTimeout(() => setToastMessage(null), 4000);
@@ -148,10 +148,8 @@ function HeadDashboardContent() {
       if (!headProfile || !headProfile.prisonId) return;
       setPrisonHead(headProfile);
 
-      // Fetch staff for this prison
       const staff = await getStaffByPrison(headProfile.prisonId);
 
-      // Enrich with latest health data
       const enriched: StaffWithHealth[] = await Promise.all(
         staff.map(async (s) => {
           const log = await getLatestHealthLog(s.uid);
@@ -165,7 +163,6 @@ function HeadDashboardContent() {
       );
       setStaffList(enriched);
 
-      // Fetch pending plans
       const staffUids = staff.map((s) => s.uid);
       if (staffUids.length > 0) {
         const [pendingDiets, pendingExercises] = await Promise.all([
@@ -209,11 +206,9 @@ function HeadDashboardContent() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ─── Drawer — open staff detail ─────────────────────────────────
+  // ─── Drawer ─────────────────────────────────────────────────────
   async function openStaffDrawer(staff: StaffWithHealth) {
     setSelectedStaff(staff);
     setDrawerOpen(true);
@@ -242,7 +237,6 @@ function HeadDashboardContent() {
       } else {
         await approveExercisePlan(item.planId, user.uid);
       }
-      // Send notification to staff
       await createAlert(
         item.staffUid,
         "plan_approved",
@@ -333,13 +327,10 @@ function HeadDashboardContent() {
       s.fullNameEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.fullNameKn?.includes(searchQuery) ||
       s.badgeNumber?.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesBmi = bmiFilter === "all" || s.latestBmiCategory === bmiFilter;
-
     return matchesSearch && matchesBmi;
   });
 
-  // ─── Chart data for drawer ──────────────────────────────────────
   const chartData = drawerHealthLogs
     .slice()
     .reverse()
@@ -353,334 +344,283 @@ function HeadDashboardContent() {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-1/3" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
-        <Skeleton className="h-48" />
-        <Skeleton className="h-64" />
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // Render
-  // ═══════════════════════════════════════════════════════════════
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Navbar />
-
+    <>
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-6 py-3 text-sm text-white shadow-xl">
+        <div
+          className="fixed bottom-6 right-6 z-50 rounded-lg px-5 py-3 text-[13px] text-white shadow-lg md:bottom-6"
+          style={{ backgroundColor: "#1A3C6B", borderLeft: "3px solid #C9A84C" }}
+        >
           {toastMessage}
         </div>
       )}
 
       <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="font-kannada text-xl font-bold" style={{ color: "#1A3C6B" }}>
-              {prisonHead?.prisonName || "Dashboard"}
-            </h1>
-            <p className="text-sm text-slate-500">
-              <span className="font-kannada">ಕಾರಾಗೃಹ ಮುಖ್ಯಸ್ಥ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್</span>
-              <span className="ml-1">· Prison Head Dashboard</span>
-            </p>
+        <div className="mb-6">
+          <h1 className="font-kannada text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+            {prisonHead?.prisonName || "Dashboard"}
+          </h1>
+          <p className="text-[12px]" style={{ color: "#6b7280" }}>
+            <span className="font-kannada">ಕಾರಾಗೃಹ ಮುಖ್ಯಸ್ಥ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್</span>
+            <span className="ml-1">· Prison Head Dashboard</span>
+          </p>
+        </div>
+
+        {/* ═══ Stats ═══════════════════════════════════ */}
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard label="ಒಟ್ಟು ಸಿಬ್ಬಂದಿ" labelEn="Total Staff" value={stats.total} icon="👥" />
+          <StatCard label="ಸಾಮಾನ್ಯ BMI" labelEn="Normal BMI" value={stats.normal} icon="💚" valueColor="#3B6D11" />
+          <StatCard label="ಗಮನ ಬೇಕು" labelEn="Needs Attention" value={stats.attention} icon="⚠️" valueColor="#BA7517" />
+          <StatCard label="ಅನುಮೋದನೆ ಬಾಕಿ" labelEn="Pending Approvals" value={stats.pending} icon="📋" />
+        </div>
+
+        {/* ═══ Pending Approvals ════════════════════════ */}
+        <div className="mb-6 rounded-xl bg-white p-4 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          <h2 className="mb-3 text-[13px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+            <span className="font-kannada">ಅನುಮೋದನೆ ಬಾಕಿ ಯೋಜನೆಗಳು</span>
+            <span className="ml-1 text-[11px]" style={{ color: "#6b7280" }}>Pending Approvals</span>
+          </h2>
+          {pendingItems.length === 0 ? (
+            <div className="py-8 text-center">
+              <span className="text-2xl">✅</span>
+              <p className="mt-1 font-kannada text-[12px]" style={{ color: "#6b7280" }}>ಯಾವುದೇ ಬಾಕಿ ಯೋಜನೆಗಳಿಲ್ಲ</p>
+              <p className="text-[11px]" style={{ color: "#6b7280" }}>No pending plans</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pendingItems.map((item) => {
+                const badge = BMI_BADGE[item.bmiCategory];
+                return (
+                  <div
+                    key={item.planId}
+                    className="flex items-center justify-between rounded-lg p-3"
+                    style={{ border: "0.5px solid #e5e7eb" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>
+                          {item.staffNameKn || item.staffName}
+                        </p>
+                        <p className="text-[10px]" style={{ color: "#6b7280" }}>{item.staffName}</p>
+                      </div>
+                      <Badge className="text-[10px]" style={{ backgroundColor: badge.bg, color: badge.text, border: "none" }}>
+                        {BMI_CATEGORY_LABELS[item.bmiCategory]}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#e5e7eb", color: "#6b7280" }}>
+                        {item.planType === "diet" ? "🍽️ Diet" : "🏋️ Exercise"}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 rounded-lg text-[11px]"
+                        style={{ backgroundColor: "#EAF3DE", color: "#27500A" }}
+                        onClick={() => handleApprove(item)}
+                      >
+                        <span className="font-kannada">ಅನುಮೋದಿಸಿ</span>
+                        <span className="ml-1 hidden sm:inline">Approve</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 rounded-lg text-[11px]"
+                        style={{ backgroundColor: "#FCEBEB", color: "#A32D2D" }}
+                        onClick={() => {
+                          setRejectModal(item);
+                          setRejectReason("");
+                        }}
+                      >
+                        <span className="font-kannada">ತಿರಸ್ಕರಿಸಿ</span>
+                        <span className="ml-1 hidden sm:inline">Reject</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Staff Table ══════════════════════════════ */}
+        <div className="rounded-xl bg-white shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          <div className="flex flex-col gap-3 p-4 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-[13px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+              <span className="font-kannada">ಸಿಬ್ಬಂದಿ ಪಟ್ಟಿ</span>
+              <span className="ml-1 text-[11px]" style={{ color: "#6b7280" }}>Staff List</span>
+            </h2>
+            <div className="flex gap-2">
+              <Input
+                placeholder="🔍 Search name / badge"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-44 rounded-lg border-[0.5px] text-[11px]"
+                style={{ borderColor: "#e5e7eb" }}
+                id="staffSearch"
+              />
+              <Select value={bmiFilter} onValueChange={setBmiFilter}>
+                <SelectTrigger className="h-8 w-36 rounded-lg border-[0.5px] text-[11px]" style={{ borderColor: "#e5e7eb" }} id="bmiFilter">
+                  <SelectValue placeholder="All BMI" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All BMI</SelectItem>
+                  {Object.values(BMICategory).map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {BMI_CATEGORY_LABELS[cat]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <CreateStaffModal onStaffCreated={fetchData} />
+            </div>
+          </div>
+          <div className="mobile-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow style={{ backgroundColor: "#F5F6FA" }}>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Name</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Badge</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Rank</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>BMI</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Category</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Last Check-in</TableHead>
+                  <TableHead className="text-[11px] font-medium" style={{ color: "#6b7280" }}>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStaff.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <span className="text-2xl">👥</span>
+                      <p className="mt-1 text-[12px]" style={{ color: "#6b7280" }}>
+                        {searchQuery || bmiFilter !== "all" ? "No staff matching filters" : "No staff members yet"}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredStaff.map((staff) => {
+                    const badge = staff.latestBmiCategory ? BMI_BADGE[staff.latestBmiCategory] : null;
+                    return (
+                      <TableRow
+                        key={staff.uid}
+                        className="cursor-pointer transition-colors hover:bg-[#fafbff]"
+                        onClick={() => openStaffDrawer(staff)}
+                      >
+                        <TableCell className="py-2">
+                          <p className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>
+                            {staff.fullNameKn || "—"}
+                          </p>
+                          <p className="text-[10px]" style={{ color: "#6b7280" }}>
+                            {staff.fullNameEn || staff.displayName}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-[11px]" style={{ color: "#6b7280" }}>{staff.badgeNumber || "—"}</TableCell>
+                        <TableCell className="text-[11px]" style={{ color: "#6b7280" }}>{staff.rank || "—"}</TableCell>
+                        <TableCell>
+                          {staff.latestBmi ? (
+                            <span className="text-[13px] font-medium" style={{ color: badge?.text || "#1A3C6B" }}>
+                              {staff.latestBmi.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-[11px]" style={{ color: "#e5e7eb" }}>—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {staff.latestBmiCategory && badge ? (
+                            <Badge className="text-[10px]" style={{ backgroundColor: badge.bg, color: badge.text, border: "none" }}>
+                              {BMI_CATEGORY_LABELS[staff.latestBmiCategory]}
+                            </Badge>
+                          ) : (
+                            <span className="text-[11px]" style={{ color: "#e5e7eb" }}>—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-[11px]" style={{ color: "#6b7280" }}>
+                          {staff.lastCheckIn
+                            ? toJsDate(staff.lastCheckIn).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px]"
+                            style={{
+                              borderColor: staff.status === "inactive" ? "#A32D2D" : "#3B6D11",
+                              color: staff.status === "inactive" ? "#A32D2D" : "#3B6D11",
+                            }}
+                          >
+                            {staff.status === "inactive" ? "Inactive" : "Active"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
-
-        {/* ═══ Section A — Stats ══════════════════════════════════ */}
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard
-            label="ಒಟ್ಟು ಸಿಬ್ಬಂದಿ"
-            labelEn="Total Staff"
-            value={stats.total}
-            icon="👥"
-            color="bg-slate-100 text-slate-700"
-          />
-          <StatCard
-            label="ಸಾಮಾನ್ಯ BMI"
-            labelEn="Normal BMI"
-            value={stats.normal}
-            icon="💚"
-            color="bg-green-50 text-green-700"
-          />
-          <StatCard
-            label="ಗಮನ ಬೇಕು"
-            labelEn="Needs Attention"
-            value={stats.attention}
-            icon="⚠️"
-            color="bg-amber-50 text-amber-700"
-          />
-          <StatCard
-            label="ಅನುಮೋದನೆ ಬಾಕಿ"
-            labelEn="Pending Approvals"
-            value={stats.pending}
-            icon="📋"
-            color="bg-purple-50 text-purple-700"
-          />
-        </div>
-
-        {/* ═══ Section B — Pending Approvals ══════════════════════ */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <h2 className="text-sm font-semibold text-slate-700">
-              <span className="font-kannada">ಅನುಮೋದನೆ ಬಾಕಿ ಯೋಜನೆಗಳು</span>
-              <span className="ml-1 text-slate-400">Pending Approvals</span>
-            </h2>
-          </CardHeader>
-          <CardContent>
-            {pendingItems.length === 0 ? (
-              <div className="py-8 text-center">
-                <span className="text-3xl">✅</span>
-                <p className="mt-2 text-sm text-slate-400">
-                  <span className="font-kannada">ಯಾವುದೇ ಬಾಕಿ ಯೋಜನೆಗಳಿಲ್ಲ</span>
-                  <br />
-                  No pending plans
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pendingItems.map((item) => {
-                  const bmiColor = BMI_COLORS[item.bmiCategory];
-                  return (
-                    <div
-                      key={item.planId}
-                      className="flex items-center justify-between rounded-lg border border-slate-100 p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">
-                            {item.staffNameKn || item.staffName}
-                          </p>
-                          <p className="text-xs text-slate-400">{item.staffName}</p>
-                        </div>
-                        <Badge className={`${bmiColor.bg} ${bmiColor.text} text-[10px]`}>
-                          {BMI_CATEGORY_LABELS[item.bmiCategory]}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px]">
-                          {item.planType === "diet" ? "🍽️ Diet" : "🏋️ Exercise"}
-                        </Badge>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="h-7 bg-green-600 text-xs text-white hover:bg-green-700"
-                          onClick={() => handleApprove(item)}
-                        >
-                          <span className="font-kannada">ಅನುಮೋದಿಸಿ</span>
-                          <span className="ml-1 hidden sm:inline">Approve</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 border-red-200 text-xs text-red-600 hover:bg-red-50"
-                          onClick={() => {
-                            setRejectModal(item);
-                            setRejectReason("");
-                          }}
-                        >
-                          <span className="font-kannada">ತಿರಸ್ಕರಿಸಿ</span>
-                          <span className="ml-1 hidden sm:inline">Reject</span>
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ═══ Section C — Staff Table ════════════════════════════ */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">
-                <span className="font-kannada">ಸಿಬ್ಬಂದಿ ಪಟ್ಟಿ</span>
-                <span className="ml-1 text-slate-400">Staff List</span>
-              </h2>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="🔍 Search name / badge"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-44 text-xs"
-                  id="staffSearch"
-                />
-                <Select value={bmiFilter} onValueChange={setBmiFilter}>
-                  <SelectTrigger className="h-8 w-36 text-xs" id="bmiFilter">
-                    <SelectValue placeholder="All BMI" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All BMI</SelectItem>
-                    {Object.values(BMICategory).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {BMI_CATEGORY_LABELS[cat]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <CreateStaffModal onStaffCreated={fetchData} />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Name</TableHead>
-                    <TableHead className="text-xs">Badge</TableHead>
-                    <TableHead className="text-xs">Rank</TableHead>
-                    <TableHead className="text-xs">BMI</TableHead>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-xs">Last Check-in</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStaff.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-sm text-slate-400">
-                        {searchQuery || bmiFilter !== "all"
-                          ? "No staff matching filters"
-                          : "No staff members yet"}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredStaff.map((staff) => {
-                      const bmiColor = staff.latestBmiCategory
-                        ? BMI_COLORS[staff.latestBmiCategory]
-                        : null;
-
-                      return (
-                        <TableRow
-                          key={staff.uid}
-                          className="cursor-pointer transition-colors hover:bg-slate-50"
-                          onClick={() => openStaffDrawer(staff)}
-                        >
-                          <TableCell>
-                            <div>
-                              <p className="font-kannada text-sm font-medium text-slate-800">
-                                {staff.fullNameKn || "—"}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {staff.fullNameEn || staff.displayName}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">
-                            {staff.badgeNumber || "—"}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-600">
-                            {staff.rank || "—"}
-                          </TableCell>
-                          <TableCell>
-                            {staff.latestBmi ? (
-                              <span className={`text-sm font-semibold ${bmiColor?.text || ""}`}>
-                                {staff.latestBmi.toFixed(1)}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-slate-300">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {staff.latestBmiCategory && bmiColor ? (
-                              <Badge className={`${bmiColor.bg} ${bmiColor.text} text-[10px]`}>
-                                {BMI_CATEGORY_LABELS[staff.latestBmiCategory]}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-slate-300">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs text-slate-500">
-                            {staff.lastCheckIn
-                              ? toJsDate(staff.lastCheckIn).toLocaleDateString("en-IN", {
-                                  day: "numeric",
-                                  month: "short",
-                                })
-                              : "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${
-                                staff.status === "inactive"
-                                  ? "border-red-200 text-red-500"
-                                  : "border-green-200 text-green-600"
-                              }`}
-                            >
-                              {staff.status === "inactive" ? "Inactive" : "Active"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* ═══ Section D — Staff Detail Drawer ══════════════════════ */}
+      {/* ═══ Staff Detail Drawer ═════════════════════════════════ */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>
-              <span className="font-kannada">ಸಿಬ್ಬಂದಿ ವಿವರ</span>
-              <span className="ml-2 text-sm font-normal text-slate-400">Staff Detail</span>
+              <span className="font-kannada" style={{ color: "#1A3C6B" }}>ಸಿಬ್ಬಂದಿ ವಿವರ</span>
+              <span className="ml-2 text-[12px] font-normal" style={{ color: "#6b7280" }}>Staff Detail</span>
             </SheetTitle>
           </SheetHeader>
 
           {drawerLoading ? (
             <div className="space-y-4 pt-6">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-20 w-full rounded-xl" />
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
             </div>
           ) : selectedStaff ? (
             <div className="space-y-5 pt-4">
-              {/* Profile info */}
-              <div className="rounded-lg border border-slate-100 p-4">
+              {/* Profile */}
+              <div className="rounded-xl p-4" style={{ border: "0.5px solid #e5e7eb" }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-kannada text-lg font-bold" style={{ color: "#1A3C6B" }}>
+                    <h3 className="font-kannada text-[14px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
                       {selectedStaff.fullNameKn || "—"}
                     </h3>
-                    <p className="text-sm text-slate-500">{selectedStaff.fullNameEn}</p>
+                    <p className="text-[12px]" style={{ color: "#6b7280" }}>{selectedStaff.fullNameEn}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge variant="outline" className="text-xs">{selectedStaff.badgeNumber}</Badge>
-                    <Badge className="text-xs text-white" style={{ backgroundColor: "#1A3C6B" }}>
-                      {selectedStaff.rank}
-                    </Badge>
+                    <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#e5e7eb" }}>{selectedStaff.badgeNumber}</Badge>
+                    <Badge className="text-[10px] text-white" style={{ backgroundColor: "#1A3C6B" }}>{selectedStaff.rank}</Badge>
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded bg-slate-50 px-2 py-1.5">
-                    <span className="text-slate-400">Duty: </span>
-                    <span className="font-medium capitalize text-slate-700">{selectedStaff.dutyType}</span>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded-lg px-2 py-1.5" style={{ backgroundColor: "#F5F6FA" }}>
+                    <span style={{ color: "#6b7280" }}>Duty: </span>
+                    <span className="font-medium capitalize" style={{ color: "#1a1a2e" }}>{selectedStaff.dutyType}</span>
                   </div>
-                  <div className="rounded bg-slate-50 px-2 py-1.5">
-                    <span className="text-slate-400">Diet: </span>
-                    <span className="font-medium capitalize text-slate-700">
+                  <div className="rounded-lg px-2 py-1.5" style={{ backgroundColor: "#F5F6FA" }}>
+                    <span style={{ color: "#6b7280" }}>Diet: </span>
+                    <span className="font-medium capitalize" style={{ color: "#1a1a2e" }}>
                       {selectedStaff.dietPreference === "veg" ? "🥬 Veg" : "🍗 Non-Veg"}
                     </span>
                   </div>
                   {selectedStaff.latestBmi && selectedStaff.latestBmiCategory && (
                     <div
-                      className={`col-span-2 rounded px-2 py-1.5 ${
-                        BMI_COLORS[selectedStaff.latestBmiCategory].bg
-                      }`}
+                      className="col-span-2 rounded-lg px-2 py-1.5"
+                      style={{ backgroundColor: BMI_BADGE[selectedStaff.latestBmiCategory].bg }}
                     >
-                      <span className={`font-semibold ${BMI_COLORS[selectedStaff.latestBmiCategory].text}`}>
+                      <span className="font-medium" style={{ color: BMI_BADGE[selectedStaff.latestBmiCategory].text }}>
                         BMI: {selectedStaff.latestBmi.toFixed(1)} — {BMI_CATEGORY_LABELS[selectedStaff.latestBmiCategory]}
                       </span>
                     </div>
@@ -688,26 +628,20 @@ function HeadDashboardContent() {
                 </div>
               </div>
 
-              {/* BMI Trend Chart */}
+              {/* BMI Trend */}
               {chartData.length > 1 && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <h4 className="mb-3 text-xs font-semibold text-slate-600">
+                <div className="rounded-xl p-4" style={{ border: "0.5px solid #e5e7eb" }}>
+                  <h4 className="mb-3 text-[12px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
                     <span className="font-kannada">BMI ಪ್ರವೃತ್ತಿ</span>
-                    <span className="ml-1 text-slate-400">BMI Trend</span>
+                    <span className="ml-1 text-[10px]" style={{ color: "#6b7280" }}>BMI Trend</span>
                   </h4>
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                      <YAxis domain={["dataMin - 2", "dataMax + 2"]} tick={{ fontSize: 10 }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#6b7280" }} />
+                      <YAxis domain={["dataMin - 2", "dataMax + 2"]} tick={{ fontSize: 10, fill: "#6b7280" }} />
                       <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="bmi"
-                        stroke="#1A3C6B"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: "#1A3C6B" }}
-                      />
+                      <Line type="monotone" dataKey="bmi" stroke="#1A3C6B" strokeWidth={2} dot={{ r: 4, fill: "#1A3C6B" }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -716,37 +650,36 @@ function HeadDashboardContent() {
               {/* Current Plans */}
               <div className="space-y-2">
                 {drawerDiet && drawerDiet.status === "approved" && (
-                  <div className="rounded-lg border border-green-100 bg-green-50 p-3">
-                    <p className="text-xs font-semibold text-green-700">
+                  <div className="rounded-xl p-3" style={{ backgroundColor: "#EAF3DE", border: "0.5px solid #3B6D1130" }}>
+                    <p className="text-[12px] font-medium" style={{ color: "#27500A" }}>
                       🍽️ <span className="font-kannada">ಆಹಾರ ಯೋಜನೆ</span> · Diet Plan
                     </p>
-                    <p className="mt-1 text-[10px] text-green-600">
-                      {drawerDiet.plan.weeklyCalorieTarget} cal/week target ·{" "}
-                      {drawerDiet.plan.dailyWaterLitres}L water/day
+                    <p className="mt-1 text-[10px]" style={{ color: "#3B6D11" }}>
+                      {drawerDiet.plan.weeklyCalorieTarget} cal/week target · {drawerDiet.plan.dailyWaterLitres}L water/day
                     </p>
                   </div>
                 )}
                 {drawerExercise && drawerExercise.status === "approved" && (
-                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-                    <p className="text-xs font-semibold text-blue-700">
+                  <div className="rounded-xl p-3" style={{ backgroundColor: "#E6F1FB", border: "0.5px solid #185FA530" }}>
+                    <p className="text-[12px] font-medium" style={{ color: "#0C447C" }}>
                       🏋️ <span className="font-kannada">ವ್ಯಾಯಾಮ ಯೋಜನೆ</span> · Exercise Plan
                     </p>
-                    <p className="mt-1 text-[10px] text-blue-600">
+                    <p className="mt-1 text-[10px]" style={{ color: "#185FA5" }}>
                       {drawerExercise.plan.weeklyPlan.filter((d) => !d.restDay).length} workout days/week
                     </p>
                   </div>
                 )}
                 {(!drawerDiet || drawerDiet.status !== "approved") &&
                   (!drawerExercise || drawerExercise.status !== "approved") && (
-                    <p className="text-center text-xs text-slate-400">No approved plans yet</p>
+                    <p className="text-center text-[11px]" style={{ color: "#6b7280" }}>No approved plans yet</p>
                   )}
               </div>
 
-              {/* Action buttons */}
+              {/* Actions */}
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="flex-1 text-xs text-white"
+                  className="flex-1 rounded-lg text-[11px] text-white"
                   style={{ backgroundColor: regenerating ? "#94a3b8" : "#1A3C6B" }}
                   disabled={regenerating}
                   onClick={handleRegeneratePlans}
@@ -755,8 +688,8 @@ function HeadDashboardContent() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="flex-1 border-orange-200 text-xs text-orange-600 hover:bg-orange-50"
+                  className="flex-1 rounded-lg text-[11px]"
+                  style={{ backgroundColor: "#FAEEDA", color: "#633806" }}
                   onClick={() => handleFlagMedical(selectedStaff.uid)}
                 >
                   🏥 Flag Medical
@@ -767,16 +700,17 @@ function HeadDashboardContent() {
         </SheetContent>
       </Sheet>
 
-      {/* ═══ Reject Reason Modal ═════════════════════════════════ */}
+      {/* ═══ Reject Modal ═════════════════════════════════════════ */}
       <Dialog open={!!rejectModal} onOpenChange={(v) => !v && setRejectModal(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              <span className="font-kannada">ತಿರಸ್ಕರಣೆ ಕಾರಣ</span>
-              <span className="ml-2 text-sm font-normal text-slate-500">
-                Rejection Reason
-              </span>
+              <span className="font-kannada" style={{ color: "#1A3C6B" }}>ತಿರಸ್ಕರಣೆ ಕಾರಣ</span>
+              <span className="ml-2 text-[12px] font-normal" style={{ color: "#6b7280" }}>Rejection Reason</span>
             </DialogTitle>
+            <DialogDescription className="text-[11px]" style={{ color: "#6b7280" }}>
+              Enter the reason for rejecting this plan
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <Textarea
@@ -785,17 +719,21 @@ function HeadDashboardContent() {
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Enter reason for rejection..."
               rows={3}
+              className="rounded-lg border-[0.5px] text-[13px]"
+              style={{ borderColor: "#e5e7eb" }}
             />
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 rounded-lg text-[13px]"
+                style={{ borderColor: "#e5e7eb", color: "#1A3C6B" }}
                 onClick={() => setRejectModal(null)}
               >
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-red-600 text-white hover:bg-red-700"
+                className="flex-1 rounded-lg text-[13px] text-white"
+                style={{ backgroundColor: "#A32D2D" }}
                 onClick={handleReject}
                 disabled={!rejectReason.trim()}
               >
@@ -806,36 +744,36 @@ function HeadDashboardContent() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
 
-// ─── Stat Card subcomponent ─────────────────────────────────────────
+// ─── Stat Card ──────────────────────────────────────────────────────
 
 function StatCard({
   label,
   labelEn,
   value,
   icon,
-  color,
+  valueColor,
 }: {
   label: string;
   labelEn: string;
   value: number;
   icon: string;
-  color: string;
+  valueColor?: string;
 }) {
   return (
-    <Card className={`${color} border-0`}>
-      <CardContent className="flex items-center gap-3 p-4">
-        <span className="text-2xl">{icon}</span>
+    <div className="rounded-xl bg-white p-4 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+      <div className="flex items-center gap-3">
+        <span className="text-xl">{icon}</span>
         <div>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="font-kannada text-[11px]">{label}</p>
-          <p className="text-[10px] opacity-70">{labelEn}</p>
+          <p className="text-[22px]" style={{ color: valueColor || "#1A3C6B", fontWeight: 500 }}>{value}</p>
+          <p className="font-kannada text-[10px]" style={{ color: "#6b7280" }}>{label}</p>
+          <p className="text-[11px]" style={{ color: "#6b7280" }}>{labelEn}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -844,7 +782,9 @@ function StatCard({
 export default function PrisonHeadDashboardPage() {
   return (
     <ProtectedRoute allowedRoles={[Role.PRISON_HEAD]}>
-      <HeadDashboardContent />
+      <DashboardLayout>
+        <HeadDashboardContent />
+      </DashboardLayout>
     </ProtectedRoute>
   );
 }

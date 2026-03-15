@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { BMICard } from "@/components/profile/BMICard";
 import { DietPlanCard } from "@/components/diet/DietPlanCard";
 import { ExercisePlanCard } from "@/components/exercise/ExercisePlanCard";
@@ -48,11 +49,8 @@ function DashboardContent() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Show toast temporarily
   useEffect(() => {
     if (!toastMessage) return;
     const timer = setTimeout(() => setToastMessage(null), 4000);
@@ -96,24 +94,24 @@ function DashboardContent() {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
 
   if (!profile?.profileComplete) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
         <span className="mb-4 text-5xl">📋</span>
-        <h1 className="font-kannada text-2xl font-bold text-slate-800">
+        <h1 className="font-kannada text-[18px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
           ಮೊದಲು ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ
         </h1>
-        <p className="mb-4 text-slate-500">Please complete your profile first</p>
+        <p className="mb-4 text-[12px]" style={{ color: "#6b7280" }}>Please complete your profile first</p>
         <a
           href="/dashboard/staff/profile"
-          className="inline-flex h-10 items-center rounded-md px-6 text-sm font-medium text-white"
+          className="inline-flex h-10 items-center rounded-lg px-6 text-[13px] font-medium text-white"
           style={{ backgroundColor: "#1A3C6B" }}
         >
           ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ / Complete Profile
@@ -126,28 +124,29 @@ function DashboardContent() {
   const bmiCategory = latestLog?.bmiCategory ?? classifyBMI(bmi);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Toast */}
-        {toastMessage && (
-          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 animate-pulse rounded-lg bg-slate-900 px-6 py-3 text-sm text-white shadow-xl">
-            {toastMessage}
-          </div>
-        )}
+    <>
+      {/* Toast */}
+      {toastMessage && (
+        <div
+          className="fixed bottom-6 right-6 z-50 rounded-lg px-5 py-3 text-[13px] text-white shadow-lg md:bottom-6"
+          style={{ backgroundColor: "#1A3C6B", borderLeft: "3px solid #C9A84C" }}
+        >
+          {toastMessage}
+        </div>
+      )}
 
-        {/* Header */}
+      <div className="mx-auto max-w-2xl space-y-6 px-4 py-6">
+        {/* Greeting */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-kannada text-xl font-bold" style={{ color: "#1A3C6B" }}>
-              {profile.fullNameKn}
+            <h1 className="font-kannada text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+              ನಮಸ್ಕಾರ, {profile.fullNameKn}
             </h1>
-            <p className="text-sm text-slate-500">{profile.fullNameEn}</p>
+            <p className="text-[12px]" style={{ color: "#6b7280" }}>{profile.fullNameEn}</p>
           </div>
           <div className="flex gap-2">
-            <Badge variant="outline" className="text-xs">{profile.badgeNumber}</Badge>
-            <Badge className="text-xs text-white" style={{ backgroundColor: "#1A3C6B" }}>
-              {profile.rank}
-            </Badge>
+            <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#e5e7eb" }}>{profile.badgeNumber}</Badge>
+            <Badge className="text-[10px] text-white" style={{ backgroundColor: "#1A3C6B" }}>{profile.rank}</Badge>
           </div>
         </div>
 
@@ -161,12 +160,12 @@ function DashboardContent() {
           onWeightLogged={fetchData}
         />
 
-        {/* Request Plans button */}
+        {/* Request Plans */}
         <div className="flex justify-center">
           <Button
             onClick={handleRequestPlans}
             disabled={generating}
-            className="h-11 px-8 text-white"
+            className="h-10 rounded-lg px-8 text-[13px] text-white"
             style={{ backgroundColor: generating ? "#94a3b8" : "#1A3C6B" }}
           >
             {generating ? (
@@ -179,7 +178,7 @@ function DashboardContent() {
               <>
                 🤖
                 <span className="ml-2 font-kannada">ಹೊಸ ಯೋಜನೆ ವಿನಂತಿಸಿ</span>
-                <span className="ml-1 text-xs opacity-75">Request New Plan</span>
+                <span className="ml-1 text-[11px] opacity-75">Request New Plan</span>
               </>
             )}
           </Button>
@@ -191,14 +190,16 @@ function DashboardContent() {
         {/* Exercise Plan */}
         <ExercisePlanCard storedPlan={exercisePlan} />
       </div>
-    </div>
+    </>
   );
 }
 
 export default function StaffDashboardPage() {
   return (
     <ProtectedRoute allowedRoles={[Role.STAFF]}>
-      <DashboardContent />
+      <DashboardLayout>
+        <DashboardContent />
+      </DashboardLayout>
     </ProtectedRoute>
   );
 }

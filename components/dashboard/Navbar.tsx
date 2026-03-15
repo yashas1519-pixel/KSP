@@ -17,41 +17,72 @@ export function Navbar() {
   if (!user || !role) return null;
 
   const roleLabel = ROLE_LABELS[role];
+  const initials = (user.displayName || user.email || "U")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <nav className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-        {/* Left — App title */}
+    <nav
+      className="sticky top-0 z-30"
+      style={{ backgroundColor: "#1A3C6B" }}
+    >
+      <div className="mx-auto flex h-14 items-center justify-between px-4">
+        {/* Left — Emblem + App title */}
         <div className="flex items-center gap-3">
+          {/* Gold star emblem */}
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-            style={{ backgroundColor: "#1A3C6B" }}
+            className="flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: "#C9A84C" }}
           >
-            <span className="text-sm font-bold">KSP</span>
+            <span className="text-sm" style={{ color: "#1A3C6B" }}>★</span>
           </div>
           <div>
-            <h1 className="text-sm font-bold" style={{ color: "#1A3C6B" }}>
-              <span className="font-kannada">ಕೆಎಸ್‌ಪಿ ಫಿಟ್‌ನೆಸ್</span>
-            </h1>
-            <p className="text-[10px] text-slate-400">KSP Fitness</p>
+            <p className="text-[13px] font-medium text-white">
+              KSP Fitness
+            </p>
+            <p
+              className="font-kannada text-[10px]"
+              style={{ color: "#C9A84C" }}
+            >
+              ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್
+            </p>
           </div>
         </div>
 
-        {/* Right — Role badge + notifications + sign out */}
+        {/* Right — Role badge + notifications + avatar + sign out */}
         <div className="flex items-center gap-3">
-          <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
-            <span className="font-kannada">{roleLabel.kn}</span>
-            <span className="mx-1">·</span>
-            <span>{roleLabel.en}</span>
+          {/* Role badge — hidden on mobile */}
+          <span
+            className="hidden rounded-full border px-3 py-1 text-[11px] font-medium sm:inline-flex"
+            style={{
+              borderColor: "#C9A84C",
+              color: "#C9A84C",
+            }}
+          >
+            {roleLabel.kn}
           </span>
 
           <NotificationBell />
+
+          {/* Avatar circle */}
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
+            style={{
+              backgroundColor: "#C9A84C",
+              color: "#1A3C6B",
+            }}
+          >
+            {initials}
+          </div>
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => signOut()}
-            className="h-9 text-xs text-slate-500 hover:text-red-600"
+            className="h-8 text-[11px] text-white/60 hover:text-white hover:bg-white/10"
           >
             <span className="font-kannada">ಲಾಗ್‌ಔಟ್</span>
           </Button>

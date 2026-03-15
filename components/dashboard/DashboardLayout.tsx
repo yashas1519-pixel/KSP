@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
 import { Navbar } from "@/components/dashboard/Navbar";
-import { Button } from "@/components/ui/button";
 
 // ─── Nav items per role ─────────────────────────────────────────────
 
@@ -19,10 +18,10 @@ interface NavItem {
 
 const STAFF_NAV: NavItem[] = [
   { href: "/dashboard/staff", icon: "🏠", labelKn: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", labelEn: "Dashboard" },
-  { href: "/dashboard/staff/profile", icon: "👤", labelKn: "ನನ್ನ ಪ್ರೊಫೈಲ್", labelEn: "My Profile" },
-  { href: "/dashboard/staff/progress", icon: "📈", labelKn: "ನನ್ನ ಪ್ರಗತಿ", labelEn: "My Progress" },
-  { href: "/dashboard/staff/diet", icon: "🍽️", labelKn: "ಆಹಾರ ಯೋಜನೆ", labelEn: "Diet Plan" },
-  { href: "/dashboard/staff/exercise", icon: "🏋️", labelKn: "ವ್ಯಾಯಾಮ ಯೋಜನೆ", labelEn: "Exercise Plan" },
+  { href: "/dashboard/staff/profile", icon: "👤", labelKn: "ಪ್ರೊಫೈಲ್", labelEn: "Profile" },
+  { href: "/dashboard/staff/progress", icon: "📈", labelKn: "ಪ್ರಗತಿ", labelEn: "Progress" },
+  { href: "/dashboard/staff/diet", icon: "🍽️", labelKn: "ಆಹಾರ", labelEn: "Diet" },
+  { href: "/dashboard/staff/exercise", icon: "🏋️", labelKn: "ವ್ಯಾಯಾಮ", labelEn: "Exercise" },
 ];
 
 const HEAD_NAV: NavItem[] = [
@@ -51,76 +50,113 @@ function getNavItems(role?: Role): NavItem[] {
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const navItems = getNavItems(user?.role as Role | undefined);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen" style={{ backgroundColor: "#F5F6FA" }}>
       <Navbar />
 
       <div className="flex">
-        {/* Sidebar */}
+        {/* ── Desktop/Tablet Sidebar ── */}
         <aside
-          className={`sticky top-0 h-[calc(100vh-56px)] border-r border-slate-200 bg-white transition-all ${
-            collapsed ? "w-16" : "w-56"
-          }`}
+          className="desktop-sidebar sticky top-0 h-[calc(100vh-56px)] flex-col transition-all duration-200"
+          style={{
+            backgroundColor: "#1A3C6B",
+            width: hovered ? 180 : 180,
+          }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
         >
-          {/* Collapse toggle */}
-          <div className="flex justify-end p-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-slate-400"
-              onClick={() => setCollapsed(!collapsed)}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          {/* Section label */}
+          <div className="px-4 pb-2 pt-5">
+            <p
+              className="text-[9px] font-medium uppercase tracking-wider"
+              style={{ color: "rgba(255,255,255,0.3)" }}
             >
-              {collapsed ? "▶" : "◀"}
-            </Button>
+              ನ್ಯಾವಿಗೇಷನ್
+            </p>
           </div>
 
-          {/* Logo (visible when expanded) */}
-          {!collapsed && (
-            <div className="px-4 pb-4">
-              <p className="font-kannada text-base font-bold" style={{ color: "#1A3C6B" }}>
-                ಕೆಎಸ್‌ಪಿ ಫಿಟ್‌ನೆಸ್
-              </p>
-              <p className="text-[10px] text-slate-400">KSP Fitness</p>
-            </div>
-          )}
-
           {/* Nav links */}
-          <nav className="space-y-1 px-2">
+          <nav className="flex-1 space-y-0.5 px-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    isActive
-                      ? "text-white"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                  style={isActive ? { backgroundColor: "#1A3C6B" } : undefined}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition-all duration-150"
+                  style={{
+                    color: isActive ? "#ffffff" : "rgba(255,255,255,0.6)",
+                    backgroundColor: isActive
+                      ? "rgba(255,255,255,0.1)"
+                      : "transparent",
+                    borderLeft: isActive
+                      ? "3px solid #C9A84C"
+                      : "3px solid transparent",
+                  }}
                   title={item.labelEn}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "rgba(255,255,255,0.6)";
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
                 >
                   <span className="text-base">{item.icon}</span>
-                  {!collapsed && (
-                    <div>
-                      <span className="font-kannada text-sm">{item.labelKn}</span>
-                      <span className="ml-1 text-[10px] opacity-70">{item.labelEn}</span>
-                    </div>
-                  )}
+                  <div>
+                    <span className="font-kannada text-[12px] font-medium">{item.labelKn}</span>
+                    <span className="ml-1 text-[10px] opacity-60">{item.labelEn}</span>
+                  </div>
                 </Link>
               );
             })}
           </nav>
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 overflow-auto">{children}</main>
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-auto pb-20 md:pb-0">{children}</main>
       </div>
+
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <nav
+        className="bottom-tab-bar fixed inset-x-0 bottom-0 z-40 items-center justify-around border-t px-1 py-1.5"
+        style={{
+          backgroundColor: "#1A3C6B",
+          borderColor: "rgba(255,255,255,0.1)",
+        }}
+      >
+        {navItems.slice(0, 5).map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center gap-0.5 rounded-lg px-2 py-1 transition-colors"
+              style={{
+                color: isActive ? "#C9A84C" : "rgba(255,255,255,0.5)",
+              }}
+            >
+              <span className="text-lg">{item.icon}</span>
+              <span className="font-kannada text-[9px] font-medium">{item.labelKn}</span>
+              {isActive && (
+                <div
+                  className="h-0.5 w-4 rounded-full"
+                  style={{ backgroundColor: "#C9A84C" }}
+                />
+              )}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { StaffProfileForm } from "@/components/profile/StaffProfileForm";
 import { BMICard } from "@/components/profile/BMICard";
 import { getStaffProfile, updateUserProfile } from "@/services/user";
@@ -13,7 +14,6 @@ import type { StaffProfile } from "@/types/user";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -57,9 +57,7 @@ function ProfileContent() {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   async function handleSaveEdits() {
     if (!user || !profile) return;
@@ -91,204 +89,207 @@ function ProfileContent() {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     );
   }
 
-  // If fetch failed → show error with retry
   if (fetchError) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-2xl">
-              ⚠️
-            </div>
-            <p className="text-sm text-red-700">{fetchError}</p>
-            <Button
-              onClick={fetchData}
-              className="text-white"
-              style={{ backgroundColor: "#1A3C6B" }}
-            >
-              ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ / Retry
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          <div
+            className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl"
+            style={{ backgroundColor: "#FCEBEB" }}
+          >
+            ⚠️
+          </div>
+          <p className="text-[13px]" style={{ color: "#A32D2D" }}>{fetchError}</p>
+          <Button
+            onClick={fetchData}
+            className="mt-4 rounded-lg text-[13px] text-white"
+            style={{ backgroundColor: "#1A3C6B" }}
+          >
+            ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ / Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
-  // If profile is not complete → show the form
   if (!profile?.profileComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="px-4 py-6">
         <div className="mb-6 text-center">
-          <h1 className="font-kannada text-2xl font-bold" style={{ color: "#1A3C6B" }}>
+          <h1 className="font-kannada text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
             ಪ್ರೊಫೈಲ್ ಪೂರ್ಣಗೊಳಿಸಿ
           </h1>
-          <p className="text-slate-500">Complete Your Profile</p>
+          <p className="text-[12px]" style={{ color: "#6b7280" }}>Complete Your Profile</p>
         </div>
         <StaffProfileForm onComplete={fetchData} />
       </div>
     );
   }
 
-  // Profile is complete → show full profile view
   const bmi = latestLog?.bmi ?? calculateBMI(profile.currentWeightKg, profile.heightCm);
   const bmiCategory = latestLog?.bmiCategory ?? classifyBMI(bmi);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Top: Profile header */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="flex items-center gap-5 pt-6">
-            {/* Photo placeholder */}
-            <div
-              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold text-white"
-              style={{ backgroundColor: "#1A3C6B" }}
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-6">
+      {/* Profile Header */}
+      <div className="rounded-xl bg-white p-5 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+        <div className="flex items-center gap-5">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl text-white"
+            style={{ backgroundColor: "#1A3C6B", fontWeight: 500 }}
+          >
+            {profile.fullNameEn?.charAt(0) || "?"}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-kannada text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+              {profile.fullNameKn}
+            </h1>
+            <p className="text-[13px]" style={{ color: "#6b7280" }}>{profile.fullNameEn}</p>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Badge variant="outline" className="text-[10px]" style={{ borderColor: "#e5e7eb" }}>
+                {profile.badgeNumber}
+              </Badge>
+              <Badge className="text-[10px] text-white" style={{ backgroundColor: "#1A3C6B" }}>
+                {profile.rank}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] capitalize" style={{ borderColor: "#e5e7eb" }}>
+                {profile.dutyType}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BMI Card */}
+      <BMICard
+        userId={user!.uid}
+        bmi={bmi}
+        category={bmiCategory}
+        heightCm={profile.heightCm}
+        lastUpdated={latestLog?.timestamp}
+        onWeightLogged={fetchData}
+      />
+
+      {/* Editable Details */}
+      <div className="rounded-xl bg-white shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+        <div className="flex items-center justify-between p-5 pb-3">
+          <div>
+            <h2 className="font-kannada text-[13px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+              ವಿವರಗಳನ್ನು ನವೀಕರಿಸಿ
+            </h2>
+            <p className="text-[11px]" style={{ color: "#6b7280" }}>Update Details</p>
+          </div>
+          {!editMode ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg text-[11px]"
+              style={{ borderColor: "#e5e7eb", color: "#1A3C6B" }}
+              onClick={() => setEditMode(true)}
             >
-              {profile.fullNameEn?.charAt(0) || "?"}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h1 className="font-kannada text-xl font-bold text-slate-800">
-                {profile.fullNameKn}
-              </h1>
-              <p className="text-lg text-slate-600">{profile.fullNameEn}</p>
-              <div className="mt-1 flex flex-wrap gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {profile.badgeNumber}
-                </Badge>
-                <Badge
-                  className="text-xs text-white"
-                  style={{ backgroundColor: "#1A3C6B" }}
-                >
-                  {profile.rank}
-                </Badge>
-                <Badge variant="outline" className="text-xs capitalize">
-                  {profile.dutyType}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Middle: BMI Card */}
-        <BMICard
-          userId={user!.uid}
-          bmi={bmi}
-          category={bmiCategory}
-          heightCm={profile.heightCm}
-          lastUpdated={latestLog?.timestamp}
-          onWeightLogged={fetchData}
-        />
-
-        {/* Bottom: Editable fields */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <h2 className="font-kannada text-lg font-semibold text-slate-800">
-                ವಿವರಗಳನ್ನು ನವೀಕರಿಸಿ
-              </h2>
-              <p className="text-sm text-slate-500">Update Details</p>
-            </div>
-            {!editMode ? (
+              ✏️ Edit
+            </Button>
+          ) : (
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setEditMode(true)}
+                className="rounded-lg text-[11px]"
+                style={{ borderColor: "#e5e7eb", color: "#6b7280" }}
+                onClick={() => setEditMode(false)}
               >
-                ✏️ Edit
+                Cancel
               </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditMode(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={isSaving}
-                  onClick={handleSaveEdits}
-                  className="text-white"
-                  style={{ backgroundColor: "#1A3C6B" }}
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            )}
-          </CardHeader>
+              <Button
+                size="sm"
+                disabled={isSaving}
+                onClick={handleSaveEdits}
+                className="rounded-lg text-[11px] text-white"
+                style={{ backgroundColor: "#1A3C6B" }}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          )}
+        </div>
 
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500">
-                  <span className="font-kannada">ತೂಕ (ಕೆ.ಜಿ.)</span> / Weight
-                </label>
-                {editMode ? (
-                  <Input
-                    type="number"
-                    value={editWeight}
-                    onChange={(e) => setEditWeight(e.target.value)}
-                  />
-                ) : (
-                  <p className="text-lg font-semibold">
-                    {profile.currentWeightKg} kg
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500">
-                  <span className="font-kannada">ಸೊಂಟ (ಸೆ.ಮೀ.)</span> / Waist
-                </label>
-                {editMode ? (
-                  <Input
-                    type="number"
-                    value={editWaist}
-                    onChange={(e) => setEditWaist(e.target.value)}
-                  />
-                ) : (
-                  <p className="text-lg font-semibold">
-                    {profile.waistCm ? `${profile.waistCm} cm` : "—"}
-                  </p>
-                )}
-              </div>
+        <div className="space-y-4 px-5 pb-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[11px]" style={{ color: "#6b7280" }}>
+                <span className="font-kannada">ತೂಕ (ಕೆ.ಜಿ.)</span>
+                <span className="ml-1">Weight</span>
+              </label>
+              {editMode ? (
+                <Input
+                  type="number"
+                  value={editWeight}
+                  onChange={(e) => setEditWeight(e.target.value)}
+                  className="h-9 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              ) : (
+                <p className="text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+                  {profile.currentWeightKg} kg
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">
-                <span className="font-kannada">ಸಾಧನೆಗಳು</span> / Achievements
+              <label className="text-[11px]" style={{ color: "#6b7280" }}>
+                <span className="font-kannada">ಸೊಂಟ (ಸೆ.ಮೀ.)</span>
+                <span className="ml-1">Waist</span>
               </label>
               {editMode ? (
-                <textarea
-                  value={editAchievements}
-                  onChange={(e) => setEditAchievements(e.target.value)}
-                  rows={3}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <Input
+                  type="number"
+                  value={editWaist}
+                  onChange={(e) => setEditWaist(e.target.value)}
+                  className="h-9 rounded-lg border-[0.5px] text-[13px]"
+                  style={{ borderColor: "#e5e7eb" }}
                 />
               ) : (
-                <div className="space-y-1">
-                  {profile.achievements?.length ? (
-                    profile.achievements.map((a, i) => (
-                      <p key={i} className="text-sm text-slate-700">
-                        • {a}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-400">No achievements listed</p>
-                  )}
-                </div>
+                <p className="text-[16px]" style={{ color: "#1A3C6B", fontWeight: 500 }}>
+                  {profile.waistCm ? `${profile.waistCm} cm` : "—"}
+                </p>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px]" style={{ color: "#6b7280" }}>
+              <span className="font-kannada">ಸಾಧನೆಗಳು</span>
+              <span className="ml-1">Achievements</span>
+            </label>
+            {editMode ? (
+              <textarea
+                value={editAchievements}
+                onChange={(e) => setEditAchievements(e.target.value)}
+                rows={3}
+                className="flex w-full rounded-lg border-[0.5px] bg-white px-3 py-2 text-[13px] focus-visible:outline-none focus-visible:ring-2"
+                style={{ borderColor: "#e5e7eb" }}
+              />
+            ) : (
+              <div className="space-y-1">
+                {profile.achievements?.length ? (
+                  profile.achievements.map((a, i) => (
+                    <p key={i} className="text-[13px]" style={{ color: "#1a1a2e" }}>
+                      • {a}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-[12px]" style={{ color: "#6b7280" }}>No achievements listed</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -297,7 +298,9 @@ function ProfileContent() {
 export default function StaffProfilePage() {
   return (
     <ProtectedRoute allowedRoles={[Role.STAFF]}>
-      <ProfileContent />
+      <DashboardLayout>
+        <ProfileContent />
+      </DashboardLayout>
     </ProtectedRoute>
   );
 }

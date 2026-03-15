@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
 import { ROUTES } from "@/constants/routes";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 function getRoleDashboard(role: Role): string {
   switch (role) {
@@ -67,10 +65,6 @@ export default function LoginPage() {
     try {
       await signIn(email, password);
 
-      // After sign-in, fetch user doc to determine role for redirect
-      // The AuthContext will handle fetching the role, but we need to wait
-      // We'll use a small delay to let the context update, then redirect
-      // A better approach: listen to auth context changes
       const { getDocument } = await import("@/lib/firebase/firestore");
       const { auth } = await import("@/lib/firebase/auth");
       const currentUser = auth.currentUser;
@@ -99,52 +93,84 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md border-0 shadow-2xl">
-        <CardHeader className="flex flex-col items-center gap-4 pb-2 pt-8">
-          {/* Shield Icon Placeholder */}
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: "#1A3C6B" }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-10 w-10"
+    <main className="flex min-h-screen">
+      {/* ── Left Panel — Navy (hidden on mobile) ── */}
+      <div
+        className="hidden flex-col items-center justify-center md:flex"
+        style={{
+          backgroundColor: "#1A3C6B",
+          width: "35%",
+          minWidth: 320,
+        }}
+      >
+        {/* Gold star emblem */}
+        <div
+          className="mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+          style={{ backgroundColor: "#C9A84C" }}
+        >
+          <span className="text-2xl" style={{ color: "#1A3C6B" }}>★</span>
+        </div>
+
+        <p className="font-kannada text-[13px] font-medium text-white">
+          ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್
+        </p>
+
+        {/* Gold divider */}
+        <div
+          className="my-3 h-px w-16"
+          style={{ backgroundColor: "#C9A84C" }}
+        />
+
+        <p className="text-[11px] text-white/80">
+          Karnataka State Police
+        </p>
+
+        <p
+          className="mt-2 font-kannada text-[10px]"
+          style={{ color: "#C9A84C" }}
+        >
+          ಸೇವೆ ಮತ್ತು ಸುರಕ್ಷತೆ / Service and Security
+        </p>
+      </div>
+
+      {/* ── Right Panel — Form ── */}
+      <div
+        className="flex flex-1 items-center justify-center p-6"
+        style={{ backgroundColor: "#F5F6FA" }}
+      >
+        <div className="w-full max-w-[400px] rounded-xl bg-white p-8 shadow-sm" style={{ border: "0.5px solid #e5e7eb" }}>
+          {/* Mobile-only emblem */}
+          <div className="mb-6 flex justify-center md:hidden">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: "#C9A84C" }}
             >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="M12 8v4" />
-              <path d="M12 16h.01" />
-            </svg>
+              <span className="text-xl" style={{ color: "#1A3C6B" }}>★</span>
+            </div>
           </div>
 
-          {/* App Title — Bilingual */}
-          <div className="text-center">
+          {/* Title */}
+          <div className="mb-6 text-center">
             <h1
-              className="font-kannada text-2xl font-bold"
-              style={{ color: "#1A3C6B" }}
+              className="font-kannada text-[20px]"
+              style={{ color: "#1A3C6B", fontWeight: 500 }}
             >
-              ಕೆಎಸ್‌ಪಿ ಫಿಟ್‌ನೆಸ್
+              ಕೆಎಸ್ಪಿ ಫಿಟ್ನೆಸ್
             </h1>
-            <p className="text-lg font-semibold text-slate-600">KSP Fitness</p>
+            <p className="text-[12px]" style={{ color: "#6b7280" }}>
+              KSP Fitness — Sign in
+            </p>
           </div>
-        </CardHeader>
 
-        <CardContent className="px-8 pb-8 pt-4">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium"
-              >
-                <span className="font-kannada text-slate-800">ಇಮೇಲ್</span>
-                <span className="ml-2 text-slate-500">Email</span>
+              <label htmlFor="email" className="block">
+                <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>
+                  ಇಮೇಲ್
+                </span>
+                <br />
+                <span className="text-[10px]" style={{ color: "#6b7280" }}>Email</span>
               </label>
               <Input
                 id="email"
@@ -155,20 +181,19 @@ export default function LoginPage() {
                 required
                 disabled={isSubmitting}
                 autoComplete="email"
-                className="h-11"
+                className="h-10 rounded-lg border-[0.5px] text-[13px] focus:border-navy focus:ring-navy"
+                style={{ borderColor: "#e5e7eb" }}
               />
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium"
-              >
-                <span className="font-kannada text-slate-800">
+              <label htmlFor="password" className="block">
+                <span className="font-kannada text-[12px] font-medium" style={{ color: "#1a1a2e" }}>
                   ಪಾಸ್‌ವರ್ಡ್
                 </span>
-                <span className="ml-2 text-slate-500">Password</span>
+                <br />
+                <span className="text-[10px]" style={{ color: "#6b7280" }}>Password</span>
               </label>
               <Input
                 id="password"
@@ -180,32 +205,37 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 autoComplete="current-password"
                 minLength={6}
-                className="h-11"
+                className="h-10 rounded-lg border-[0.5px] text-[13px] focus:border-navy focus:ring-navy"
+                style={{ borderColor: "#e5e7eb" }}
               />
             </div>
 
-            {/* Forgot Password Link */}
-            <div className="text-right">
+            {/* Forgot Password */}
+            <div className="text-center">
               <a
                 href={ROUTES.FORGOT_PASSWORD}
-                className="text-sm font-medium hover:underline"
-                style={{ color: "#1A3C6B" }}
+                className="font-kannada text-[12px] font-medium hover:underline"
+                style={{ color: "#C9A84C" }}
               >
-                <span className="font-kannada">ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?</span>
-                <span className="ml-1">Forgot password?</span>
+                ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?
+                <span className="ml-1 font-sans">Forgot password?</span>
               </a>
             </div>
 
-            {/* Error Message — Bilingual */}
+            {/* Error Message */}
             {error && (
               <div
-                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm"
+                className="rounded-lg p-3 text-[12px]"
+                style={{
+                  backgroundColor: "#FCEBEB",
+                  border: "0.5px solid #A32D2D20",
+                }}
                 role="alert"
               >
-                <p className="font-kannada font-medium text-red-700">
+                <p className="font-kannada font-medium" style={{ color: "#A32D2D" }}>
                   {error.kn}
                 </p>
-                <p className="text-red-600">{error.en}</p>
+                <p style={{ color: "#501313" }}>{error.en}</p>
               </div>
             )}
 
@@ -213,7 +243,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="h-11 w-full text-base font-semibold text-white transition-all hover:opacity-90"
+              className="h-10 w-full rounded-lg text-[13px] font-medium text-white transition-all hover:opacity-90"
               style={{ backgroundColor: "#1A3C6B" }}
             >
               {isSubmitting ? (
@@ -247,11 +277,11 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="mt-6 text-center text-xs text-slate-400">
+          <p className="mt-6 text-center text-[10px]" style={{ color: "#6b7280" }}>
             Karnataka State Police — Staff Fitness Portal
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </main>
   );
 }
