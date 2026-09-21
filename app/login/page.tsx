@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Role } from "@/constants/roles";
@@ -17,7 +17,7 @@ function getRoleDashboard(role: Role): string {
     case Role.STAFF:
       return ROUTES.DASHBOARD_STAFF;
     default:
-      return ROUTES.DASHBOARD;
+      return ROUTES.DASHBOARD_STAFF;
   }
 }
 
@@ -70,8 +70,15 @@ export default function LoginPage() {
   const [error, setError] = useState<{ en: string; kn: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signIn } = useAuth();
+  const { signIn, user, role, loading } = useAuth();
   const router = useRouter();
+
+  // If the user is already authenticated, redirect to their dashboard
+  useEffect(() => {
+    if (!loading && user && role) {
+      router.replace(getRoleDashboard(role));
+    }
+  }, [loading, user, role, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
