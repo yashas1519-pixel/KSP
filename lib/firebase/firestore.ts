@@ -1,4 +1,6 @@
 import {
+  initializeFirestore,
+  memoryLocalCache,
   getFirestore,
   collection,
   doc,
@@ -17,9 +19,16 @@ import {
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
 
-// Use default memory cache — persistent IndexedDB cache can become
-// stale/corrupted after long periods of inactivity and block reads
-const db: Firestore = getFirestore(firebaseApp);
+// Explicit memory cache — avoids stale/corrupted IndexedDB persistent cache
+let db: Firestore;
+try {
+  db = initializeFirestore(firebaseApp, {
+    localCache: memoryLocalCache(),
+  });
+} catch {
+  // Already initialized (hot reload) — just get the existing instance
+  db = getFirestore(firebaseApp);
+}
 
 export async function getDocument<T extends DocumentData>(
   collectionName: string,
