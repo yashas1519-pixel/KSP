@@ -1,8 +1,5 @@
 import {
-  initializeFirestore,
   getFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
   collection,
   doc,
   getDoc,
@@ -20,18 +17,9 @@ import {
 } from "firebase/firestore";
 import { firebaseApp } from "./firebase";
 
-// Use modern cache config; fall back to getFirestore on hot reload re-init
-let db: Firestore;
-try {
-  db = initializeFirestore(firebaseApp, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
-} catch {
-  // Already initialized (hot reload) — just get the existing instance
-  db = getFirestore(firebaseApp);
-}
+// Use default memory cache — persistent IndexedDB cache can become
+// stale/corrupted after long periods of inactivity and block reads
+const db: Firestore = getFirestore(firebaseApp);
 
 export async function getDocument<T extends DocumentData>(
   collectionName: string,
