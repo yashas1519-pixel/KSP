@@ -26,6 +26,23 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Attempt to read a Firestore user doc with a single retry.
+ */
+async function fetchUserDoc(uid: string): Promise<User | null> {
+  try {
+    return await getDocument<User>("users", uid);
+  } catch {
+    // First attempt failed — wait briefly and retry once
+    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      return await getDocument<User>("users", uid);
+    } catch {
+      return null;
+    }
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -43,24 +60,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         setFirebaseUser(fbUser);
 
-        try {
-          // Fetch user document from Firestore to get their role
-          const userDoc = await getDocument<User>("users", fbUser.uid);
+        // Fetch user document from Firestore to get their role
+        const userDoc = await fetchUserDoc(fbUser.uid);
 
-          if (userDoc) {
-            setUser(userDoc);
-            setRole(userDoc.role);
-            setMustChangePassword(userDoc.mustChangePassword === true);
-          } else {
-            // User exists in Auth but not in Firestore — clear state
-            setUser(null);
-            setRole(null);
-            setMustChangePassword(false);
-          }
-        } catch {
-          // Firestore read failed — don't hang forever
-          setUser(null);
-          setRole(null);
+        if (userDoc) {
+          setUser(userDoc);
+          setRole(userDoc.role);
+          setMustChangePassword(userDoc.mustChangePassword === true);
+        } else {
+          // Firestore doc not found or read failed — construct a minimal
+          // user from Firebase Auth so ProtectedRoute doesn't kick them out.
+          // The dashboard may have limited functionality but at least they
+          // won't be stuck in a login loop.
+          const fallbackUser: User = {
+            uid: fbUser.uid,
+            email: fbUser.email ?? "",
+            displayName: fbUser.displayName ?? fbUser.email ?? "",
+            role: Role.STAFF, // safe default
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          setUser(fallbackUser);
+          setRole(Role.STAFF);
+          setMustChangePassword(false);
         }
       } else {
         setFirebaseUser(null);

@@ -201,6 +201,9 @@ function HeadDashboardContent() {
         }
         setPendingItems(items);
       }
+    } catch {
+      // Firestore query failed (e.g. permissions, network).
+      // Page will show empty state rather than crashing.
     } finally {
       setLoading(false);
     }
