@@ -38,6 +38,22 @@ const ERROR_MESSAGES: Record<string, { en: string; kn: string }> = {
     en: "Too many attempts. Please try again later",
     kn: "ಹಲವು ಪ್ರಯತ್ನಗಳು. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ",
   },
+  "auth/user-disabled": {
+    en: "This account has been disabled. Contact your administrator",
+    kn: "ಈ ಖಾತೆಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ. ನಿಮ್ಮ ನಿರ್ವಾಹಕರನ್ನು ಸಂಪರ್ಕಿಸಿ",
+  },
+  "auth/network-request-failed": {
+    en: "Network error. Please check your internet connection",
+    kn: "ನೆಟ್‌ವರ್ಕ್ ದೋಷ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ",
+  },
+  "auth/invalid-api-key": {
+    en: "App configuration error. Please contact administrator",
+    kn: "ಅಪ್ಲಿಕೇಶನ್ ಕಾನ್ಫಿಗರೇಶನ್ ದೋಷ. ದಯವಿಟ್ಟು ನಿರ್ವಾಹಕರನ್ನು ಸಂಪರ್ಕಿಸಿ",
+  },
+  "auth/api-key-not-valid": {
+    en: "API key expired or restricted. Please contact administrator",
+    kn: "API ಕೀ ಅವಧಿ ಮೀರಿದೆ ಅಥವಾ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. ನಿರ್ವಾಹಕರನ್ನು ಸಂಪರ್ಕಿಸಿ",
+  },
   default: {
     en: "Something went wrong. Please try again",
     kn: "ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
@@ -62,9 +78,34 @@ export default function LoginPage() {
     setError(null);
     setIsSubmitting(true);
 
+    // Step 1: Authenticate with Firebase Auth
     try {
       await signIn(email, password);
+    } catch (err: unknown) {
+      const firebaseError = err as { code?: string; message?: string };
+      const errorCode = firebaseError.code ?? "default";
+      const mapped = getErrorMessage(errorCode);
 
+      if (errorCode !== "default" && !ERROR_MESSAGES[errorCode]) {
+        setError({
+          kn: mapped.kn,
+          en: `${mapped.en} (${errorCode})`,
+        });
+      } else if (errorCode === "default" && firebaseError.message) {
+        setError({
+          kn: mapped.kn,
+          en: `${mapped.en} — ${firebaseError.message}`,
+        });
+      } else {
+        setError(mapped);
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Step 2: Auth succeeded — fetch user profile from Firestore
+    // If Firestore fails (e.g. stale cache, network issue), still redirect
+    try {
       const { getDocument } = await import("@/lib/firebase/firestore");
       const { auth } = await import("@/lib/firebase/auth");
       const currentUser = auth.currentUser;
@@ -82,11 +123,12 @@ export default function LoginPage() {
         } else {
           router.replace(ROUTES.DASHBOARD);
         }
+      } else {
+        router.replace(ROUTES.DASHBOARD);
       }
-    } catch (err: unknown) {
-      const firebaseError = err as { code?: string };
-      const errorCode = firebaseError.code ?? "default";
-      setError(getErrorMessage(errorCode));
+    } catch {
+      // Firestore read failed — but auth was successful, redirect to dashboard
+      router.replace(ROUTES.DASHBOARD);
     } finally {
       setIsSubmitting(false);
     }
