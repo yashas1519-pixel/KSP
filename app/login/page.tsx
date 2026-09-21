@@ -121,14 +121,16 @@ export default function LoginPage() {
         } else if (userDoc?.role) {
           router.replace(getRoleDashboard(userDoc.role));
         } else {
-          router.replace(ROUTES.DASHBOARD);
+          // User doc exists but has no role — default to staff
+          router.replace(ROUTES.DASHBOARD_STAFF);
         }
       } else {
-        router.replace(ROUTES.DASHBOARD);
+        router.replace(ROUTES.DASHBOARD_STAFF);
       }
     } catch {
-      // Firestore read failed — but auth was successful, redirect to dashboard
-      router.replace(ROUTES.DASHBOARD);
+      // Firestore read failed — auth was successful though.
+      // Reload the page so AuthContext picks up the session and routes properly
+      window.location.href = "/";
     } finally {
       setIsSubmitting(false);
     }
